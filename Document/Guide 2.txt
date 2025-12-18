@@ -1,0 +1,8 @@
+Build the Batik and Thread homepage using Next.js App Router and Tailwind based on the approved mockup.
+Implement Supabase product fetching with public read access and admin-only write access.
+Create the admin dashboard layout with sidebar navigation and protected routes.
+Implement Stripe checkout and webhook handling for orders and receipts.
+Build custom order request form and admin review workflow.
+
+
+

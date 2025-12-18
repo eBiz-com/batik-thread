@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batik Thread | Modern African Luxury</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="logo">Batik Thread</div>
+    <nav class="nav-links">
+      <a href="#hero">Home</a>
+      <a href="#shop">Shop</a>
+      <a href="#about">About</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div id="floating-cart" class="cart-icon">
+      🛒<span id="cart-count">0</span>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="hero" class="hero">
+    <div class="hero-content">
+      <h1 class="glimmer">Modern African Luxury</h1>
+      <p>Bold. Refined. Rooted in Heritage.</p>
+      <a href="#shop" class="btn-primary">Shop Now</a>
+    </div>
+  </section>
+
+  <!-- Filter & Shop Section -->
+  <section id="shop" class="shop-section">
+    <div class="filter-bar">
+      <select id="genderFilter">
+        <option value="all">All Genders</option>
+        <option value="Men">Men</option>
+        <option value="Women">Women</option>
+        <option value="Kids">Kids</option>
+      </select>
+
+      <select id="colorFilter">
+        <option value="all">All Colors</option>
+        <option value="gold">Gold</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+        <option value="green">Green</option>
+        <option value="black">Black</option>
+      </select>
+
+      <div class="price-filter">
+        <label for="priceRange">Max Price: </label>
+        <span id="priceValue">$250</span>
+        <input type="range" id="priceRange" min="50" max="250" step="10" value="250" />
+      </div>
+    </div>
+
+    <div id="product-list" class="product-grid"></div>
+  </section>
+
+  <!-- Product Modal -->
+  <div id="product-modal" class="modal hidden">
+    <div class="modal-content">
+      <span id="close-modal" class="close">&times;</span>
+      <div class="carousel">
+        <div class="carousel-images"></div>
+      </div>
+      <div class="modal-info">
+        <h2 id="modal-name"></h2>
+        <p id="modal-price"></p>
+        <p id="modal-story"></p>
+        <p><strong>Fabric:</strong> <span id="modal-fabric"></span></p>
+        <p><strong>Origin:</strong> <span id="modal-origin"></span></p>
+        <label for="sizeSelect">Size:</label>
+        <select id="sizeSelect">
+          <option value="S">S</option>
+          <option value="M">M</option>
+          <option value="L">L</option>
+          <option value="XL">XL</option>
+        </select>
+        <div class="modal-actions">
+          <button id="add-to-cart" class="btn-secondary">Add to Cart</button>
+          <button id="chat-whatsapp" class="btn-primary">Chat on WhatsApp</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart Modal -->
+  <div id="cart-modal" class="modal hidden">
+    <div class="modal-content cart-modal">
+      <span id="close-cart" class="close">&times;</span>
+      <h2>Your Cart</h2>
+      <div id="cart-items"></div>
+      <div class="cart-summary">
+        <p>Total: $<span id="cart-total">0.00</span></p>
+        <button id="checkout-btn" class="btn-primary">Checkout via WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Section -->
+  <section id="about" class="about-section">
+    <h2>About Batik Thread</h2>
+    <p>
+      We celebrate African craftsmanship through contemporary design — each
+      piece tells a story of heritage and innovation. Our fabrics are sourced
+      ethically and tailored with precision to bring timeless elegance to
+      modern fashion.
+    </p>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="contact-section">
+    <h2>Contact Us</h2>
+    <p>Email: <a href="mailto:info@batikthread.com">info@batikthread.com</a></p>
+    <p>Phone: <a href="tel:+13219616566">+1 321 961 6566</a></p>
+    <p>Follow us on social media for updates and style inspirations.</p>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2025 Batik Thread — Modern African Luxury</p>
+  </footer>
+
+  <button id="backToTop" class="back-to-top">↑</button>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
