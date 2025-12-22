@@ -88,3 +88,26 @@ export interface Transaction {
   updated_at?: string
   transaction_source: 'checkout' | 'admin_receipt' // Where the transaction came from
 }
+
+export interface ContactCardSettings {
+  id: number
+  company_name: string
+  company_theme: string
+  company_tagline: string
+  company_logo_url?: string
+  location_city: string
+  location_state: string
+  phone_number: string
+  whatsapp_number: string
+  show_website: boolean
+  website_url?: string
+  show_event: boolean
+  event_name?: string
+  event_address?: string
+  show_stand_number: boolean
+  stand_number?: string
+  qr_code_url?: string
+  card_id: string
+  created_at: string
+  updated_at?: string
+}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, Product, CustomRequest } from '@/lib/supabase'
-import { LogOut, Plus, Trash2, Edit, Package, FileText, Database, Settings, Upload, Image as ImageIcon, X, DollarSign, RefreshCw } from 'lucide-react'
+import { LogOut, Plus, Trash2, Edit, Package, FileText, Database, Settings, Upload, Image as ImageIcon, X, DollarSign, RefreshCw, QrCode } from 'lucide-react'
 import Link from 'next/link'
 import { getSettings, saveSettings, StoreSettings } from '@/lib/settings'
 
@@ -601,6 +601,13 @@ export default function AdminDashboard() {
             >
               <Database size={18} />
               Database Setup
+            </Link>
+            <Link
+              href="/admin/heritage-card"
+              className="flex items-center gap-2 px-4 py-2 border border-amber-500 text-amber-400 rounded-lg hover:bg-amber-500 hover:text-white transition-all text-sm"
+            >
+              <QrCode size={18} />
+              HeritageCard™
             </Link>
             <button
               onClick={handleLogout}
