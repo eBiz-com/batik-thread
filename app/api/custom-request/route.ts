@@ -20,7 +20,7 @@ async function logSubmission(data: {
   email: string
   customer_name: string
   form_fill_time: number | undefined
-    captcha_passed: false
+  captcha_passed: false
   honeypot_triggered: boolean
   blocked_reason: string | null
   success: boolean
@@ -28,12 +28,31 @@ async function logSubmission(data: {
   device_fingerprint: string | undefined
 }) {
   try {
-    await supabase.from('submission_logs').insert([{
+    const { data: logData, error } = await supabase.from('submission_logs').insert([{
       ...data,
       created_at: new Date().toISOString(),
-    }])
-  } catch (error) {
-    console.error('Error logging submission:', error)
+    }]).select()
+    
+    if (error) {
+      // Log error but don't throw - we don't want logging failures to break submissions
+      console.error('Error logging submission to database:', error)
+      console.error('Submission data that failed to log:', data)
+      
+      // If table doesn't exist, log a helpful message
+      if (error.message?.includes('relation "submission_logs" does not exist') || 
+          error.code === '42P01') {
+        console.error('⚠️ submission_logs table does not exist! Please run CREATE_SUBMISSION_LOGS_TABLE.sql in Supabase SQL Editor')
+      }
+    } else {
+      console.log('✅ Submission logged successfully:', logData?.[0]?.id)
+    }
+  } catch (error: any) {
+    console.error('Error logging submission (catch block):', error)
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+    })
   }
 }
 
