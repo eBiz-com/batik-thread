@@ -615,54 +615,71 @@ export default function HeritageCardAdmin() {
         )}
       </div>
 
-      {/* Print Preview - Hidden until print */}
-      <div className="hidden print:block">
-        <style dangerouslySetInnerHTML={{__html: `
-          @media print {
-            @page {
-              size: 3.5in 2in;
-              margin: 0.25in;
-            }
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            html, body {
-              margin: 0;
-              padding: 0;
-              width: 100%;
-              height: 100%;
-            }
-            body * {
-              visibility: hidden;
-            }
-            .print-card-front,
-            .print-card-back {
-              visibility: visible !important;
-              position: absolute !important;
-              left: 0 !important;
-              top: 0 !important;
-              width: 100% !important;
-              height: 100% !important;
-              margin: 0 !important;
-              padding: 0.5in !important;
-              background: white !important;
-              page-break-inside: avoid !important;
-            }
-            .print-card-front {
-              page-break-after: always !important;
-            }
-            .print-card-back {
-              page-break-before: always !important;
-            }
-            .no-print,
-            .no-print * {
-              display: none !important;
-              visibility: hidden !important;
-            }
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: 3.5in 2in;
+            margin: 0.25in;
           }
-        `}} />
-        
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: white !important;
+          }
+          body * {
+            visibility: hidden !important;
+          }
+          .print-card-front,
+          .print-card-back {
+            visibility: visible !important;
+            display: flex !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0.5in !important;
+            background: white !important;
+            page-break-inside: avoid !important;
+          }
+          .print-card-front {
+            page-break-after: always !important;
+          }
+          .print-card-back {
+            page-break-before: always !important;
+          }
+          .no-print,
+          .no-print * {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          .print-card-front *,
+          .print-card-back * {
+            visibility: visible !important;
+          }
+        }
+        @media screen {
+          .print-only {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+          }
+        }
+      `}</style>
+
+      {/* Print Preview - Always rendered but hidden on screen */}
+      <div className="print-only">
         {/* Front of Card */}
         <div ref={printFrontRef} className="print-card-front flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-full w-full text-center border-4 border-amber-300">
