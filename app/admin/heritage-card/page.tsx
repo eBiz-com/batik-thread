@@ -43,6 +43,7 @@ export default function HeritageCardAdmin() {
 
   const printFrontRef = useRef<HTMLDivElement>(null)
   const printBackRef = useRef<HTMLDivElement>(null)
+  const qrCodeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -223,8 +224,10 @@ export default function HeritageCardAdmin() {
   }
 
   const handlePrint = () => {
-    // Trigger print dialog
-    window.print()
+    // Small delay to ensure QR code is rendered
+    setTimeout(() => {
+      window.print()
+    }, 200)
   }
 
   const getQRCodeValue = () => {
@@ -676,12 +679,13 @@ export default function HeritageCardAdmin() {
         }
         @media screen {
           .print-only {
-            position: absolute;
+            position: fixed;
             left: -9999px;
             top: -9999px;
             width: 1px;
             height: 1px;
             overflow: hidden;
+            visibility: hidden;
           }
         }
       `}</style>
@@ -707,10 +711,12 @@ export default function HeritageCardAdmin() {
         <div ref={printBackRef} className="print-card-back flex flex-col items-center justify-center bg-white">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-full w-full text-center border-4 border-amber-300">
             <h2 className="text-xl font-bold text-amber-900 mb-4">Scan for Contact Info</h2>
-            <div className="flex justify-center mb-4" style={{ 
+            <div ref={qrCodeRef} className="flex justify-center mb-4" style={{ 
               backgroundColor: '#FFFFFF',
               padding: '10px',
-              display: 'inline-block'
+              display: 'inline-block',
+              minWidth: '220px',
+              minHeight: '220px'
             }}>
               {getQRCodeValue() && (
                 <QRCodeSVG
@@ -720,6 +726,7 @@ export default function HeritageCardAdmin() {
                   includeMargin={true}
                   fgColor="#000000"
                   bgColor="#FFFFFF"
+                  renderAs="svg"
                 />
               )}
             </div>
