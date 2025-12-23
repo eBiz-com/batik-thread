@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase, ContactCardSettings } from '@/lib/supabase'
-import { Save, Upload, QrCode, Printer, Phone, MessageCircle, Globe, MapPin, Building2, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Save, Upload, QrCode, Printer, Phone, MessageCircle, Globe, MapPin, Building2, Eye, EyeOff, Loader2, Download } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import Link from 'next/link'
+import QRCode from 'qrcode'
 
 export default function HeritageCardAdmin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -726,7 +727,19 @@ export default function HeritageCardAdmin() {
               minWidth: '220px',
               minHeight: '220px'
             }}>
-              {getQRCodeValue() && (
+              {qrCodeImage ? (
+                <img 
+                  src={qrCodeImage} 
+                  alt="QR Code" 
+                  style={{ 
+                    width: '200px', 
+                    height: '200px',
+                    imageRendering: 'crisp-edges',
+                    printColorAdjust: 'exact',
+                    WebkitPrintColorAdjust: 'exact'
+                  }}
+                />
+              ) : getQRCodeValue() ? (
                 <QRCodeSVG
                   value={getQRCodeValue()}
                   size={200}
@@ -735,7 +748,7 @@ export default function HeritageCardAdmin() {
                   fgColor="#000000"
                   bgColor="#FFFFFF"
                 />
-              )}
+              ) : null}
             </div>
             <p className="text-xs text-gray-600 font-medium">Scan with your phone camera</p>
             <p className="text-xs text-gray-500 mt-1">JTD eBiz Card™</p>
