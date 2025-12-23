@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Upload, Calendar, Users, Ruler, Image as ImageIcon, Loader2, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import ReCAPTCHA from 'react-google-recaptcha'
 
 export default function CustomRequestPage() {
   const [formData, setFormData] = useState({
@@ -20,6 +21,8 @@ export default function CustomRequestPage() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -48,6 +51,13 @@ export default function CustomRequestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    
+    // Verify CAPTCHA
+    if (!captchaToken) {
+      setError('Please complete the CAPTCHA verification')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -76,6 +86,7 @@ export default function CustomRequestPage() {
           ...formData,
           quantity: parseInt(formData.quantity),
           style_images: imageUrls,
+          captcha_token: captchaToken,
         }),
       })
 
@@ -96,11 +107,21 @@ export default function CustomRequestPage() {
         })
         setImages([])
         setImagePreviews([])
+        setCaptchaToken(null)
+        // Reset CAPTCHA
+        if (recaptchaRef.current) {
+          recaptchaRef.current.reset()
+        }
       } else {
         throw new Error(data.error || 'Failed to submit request')
       }
     } catch (err: any) {
       setError(err.message || 'Failed to submit request. Please try again.')
+      // Reset CAPTCHA on error
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset()
+      }
+      setCaptchaToken(null)
     } finally {
       setLoading(false)
     }
@@ -315,6 +336,33 @@ export default function CustomRequestPage() {
               )}
             </div>
 
+            {/* CAPTCHA */}
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
+                  onChange={(token) => setCaptchaToken(token)}
+                  onExpired={() => setCaptchaToken(null)}
+                  onError={() => {
+                    setCaptchaToken(null)
+                    setError('CAPTCHA verification failed. Please try again.')
+                  }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                This site is protected by reCAPTCHA and the Google{' '}
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
+                  Privacy Policy
+                </a>
+                {' '}and{' '}
+                <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
+                  Terms of Service
+                </a>
+                {' '}apply.
+              </p>
+            </div>
+
             {error && (
               <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-lg">
                 {error}
@@ -330,7 +378,7 @@ export default function CustomRequestPage() {
               </Link>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !captchaToken}
                 className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (

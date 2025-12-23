@@ -1,6 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+async function verifyCaptcha(token: string): Promise<boolean> {
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY
+  
+  // If no secret key is set, skip verification (for development)
+  // In production, you should always have a secret key
+  if (!secretKey) {
+    console.warn('RECAPTCHA_SECRET_KEY not set, skipping CAPTCHA verification')
+    return true // Allow in development
+  }
+
+  try {
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `secret=${secretKey}&response=${token}`,
+    })
+
+    const data = await response.json()
+    return data.success === true
+  } catch (error) {
+    console.error('Error verifying CAPTCHA:', error)
+    return false
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -14,6 +41,7 @@ export async function POST(request: NextRequest) {
       sizes,
       description,
       style_images,
+      captcha_token,
     } = body
 
     // Validate required fields
@@ -22,6 +50,25 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'All required fields must be filled' },
         { status: 400 }
       )
+    }
+
+    // Verify CAPTCHA
+    if (captcha_token) {
+      const isValidCaptcha = await verifyCaptcha(captcha_token)
+      if (!isValidCaptcha) {
+        return NextResponse.json(
+          { success: false, error: 'CAPTCHA verification failed. Please try again.' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // In production, require CAPTCHA
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { success: false, error: 'CAPTCHA verification is required' },
+          { status: 400 }
+        )
+      }
     }
 
     // Insert into Supabase
