@@ -396,30 +396,27 @@ export default function CustomRequestPage() {
               )}
             </div>
 
-            {/* CAPTCHA */}
+            {/* Confirmation Checkbox */}
             <div className="space-y-4">
-              <div className="flex justify-center">
-                <ReCAPTCHA
-                  ref={recaptchaRef}
-                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
-                  onChange={(token) => setCaptchaToken(token)}
-                  onExpired={() => setCaptchaToken(null)}
-                  onError={() => {
-                    setCaptchaToken(null)
-                    setError('CAPTCHA verification failed. Please try again.')
-                  }}
-                />
+              <div className="bg-gray-800 p-4 rounded-lg border border-gold/30">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(e) => setConfirmed(e.target.checked)}
+                    className="mt-1 w-5 h-5 rounded border-gold/50 bg-gray-700 text-gold focus:ring-gold focus:ring-2 cursor-pointer"
+                    required
+                  />
+                  <div className="flex-1">
+                    <p className="text-gold font-semibold mb-1">Confirm Your Request</p>
+                    <p className="text-gray-300 text-sm">
+                      I confirm that I want to proceed with this custom order request. I understand that this is a legitimate request and I will be contacted regarding my order.
+                    </p>
+                  </div>
+                </label>
               </div>
               <p className="text-xs text-gray-500 text-center">
-                This site is protected by reCAPTCHA and the Google{' '}
-                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
-                  Privacy Policy
-                </a>
-                {' '}and{' '}
-                <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
-                  Terms of Service
-                </a>
-                {' '}apply.
+                By checking this box, you confirm that you are submitting a legitimate custom order request.
               </p>
             </div>
 
