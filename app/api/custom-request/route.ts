@@ -82,11 +82,15 @@ async function checkRateLimit(ip: string, email: string): Promise<{ allowed: boo
 async function verifyCaptcha(token: string): Promise<boolean> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY
   
-  // If no secret key is set, skip verification (for development)
-  // In production, you should always have a secret key
+  // ALWAYS require CAPTCHA - no exceptions
   if (!secretKey) {
-    console.warn('RECAPTCHA_SECRET_KEY not set, skipping CAPTCHA verification')
-    return true // Allow in development
+    console.warn('RECAPTCHA_SECRET_KEY not set - BLOCKING submission')
+    return false // Block if no secret key
+  }
+
+  if (!token || token.length < 20) {
+    console.warn('Invalid CAPTCHA token format')
+    return false
   }
 
   try {
@@ -99,10 +103,42 @@ async function verifyCaptcha(token: string): Promise<boolean> {
     })
 
     const data = await response.json()
-    return data.success === true
+    
+    // Check score for v3 (if applicable) or success for v2
+    if (data.success === true) {
+      // Additional check: score should be > 0.5 for v3
+      if (data.score !== undefined && data.score < 0.5) {
+        console.warn('CAPTCHA score too low:', data.score)
+        return false
+      }
+      return true
+    }
+    
+    return false
   } catch (error) {
     console.error('Error verifying CAPTCHA:', error)
     return false
+  }
+}
+
+// Check for duplicate submissions
+async function checkDuplicateSubmission(email: string, phone: string, eventName: string): Promise<boolean> {
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    
+    const { data } = await supabase
+      .from('custom_requests')
+      .select('id')
+      .eq('customer_email', email.toLowerCase())
+      .eq('customer_phone', phone)
+      .eq('event_name', eventName)
+      .gte('created_at', oneHourAgo)
+      .limit(1)
+    
+    return (data && data.length > 0)
+  } catch (error) {
+    console.error('Error checking duplicate:', error)
+    return false // If check fails, allow submission but log it
   }
 }
 
@@ -171,13 +207,52 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check minimum form fill time (at least 3 seconds)
-    if (form_fill_time && form_fill_time < 3000) {
+    // Check minimum form fill time (at least 10 seconds - stricter)
+    if (!form_fill_time || form_fill_time < 10000) {
       console.warn('Suspicious: Form submitted too quickly', { form_fill_time, ip: clientIP, email: customer_email })
-      submissionData.blocked_reason = 'Form submitted too quickly'
+      submissionData.blocked_reason = `Form submitted too quickly (${form_fill_time}ms, minimum 10000ms)`
       await logSubmission(submissionData)
       return NextResponse.json(
-        { success: false, error: 'Form submitted too quickly. Please try again.' },
+        { success: false, error: 'Please take more time to fill out the form completely.' },
+        { status: 400 }
+      )
+    }
+
+    // Check for suspicious user agents (bots, scrapers, etc.)
+    const suspiciousUserAgents = [
+      /bot/i,
+      /crawler/i,
+      /spider/i,
+      /scraper/i,
+      /curl/i,
+      /wget/i,
+      /python/i,
+      /java/i,
+      /postman/i,
+      /insomnia/i,
+      /httpie/i,
+    ]
+    if (userAgent && suspiciousUserAgents.some(pattern => pattern.test(userAgent))) {
+      console.warn('Suspicious user agent detected:', { userAgent, ip: clientIP, email: customer_email })
+      submissionData.blocked_reason = 'Suspicious user agent detected'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'Invalid submission detected' },
+        { status: 400 }
+      )
+    }
+
+    // Check for missing or suspicious headers
+    const referer = request.headers.get('referer')
+    const origin = request.headers.get('origin')
+    const expectedOrigin = process.env.NEXT_PUBLIC_SITE_URL || 'https://batik-thread.vercel.app'
+    
+    if (origin && !origin.includes('batik-thread') && !origin.includes('localhost')) {
+      console.warn('Suspicious origin detected:', { origin, ip: clientIP, email: customer_email })
+      submissionData.blocked_reason = 'Invalid origin header'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'Invalid submission source' },
         { status: 400 }
       )
     }
@@ -221,10 +296,50 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate required fields
+    // Validate required fields with stricter checks
     if (!customer_name || !customer_email || !customer_phone || !event_name || !event_date || !quantity || !sizes || !description) {
+      submissionData.blocked_reason = 'Missing required fields'
+      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'All required fields must be filled' },
+        { status: 400 }
+      )
+    }
+
+    // Check for duplicate submissions (same email, phone, event within 1 hour)
+    const isDuplicate = await checkDuplicateSubmission(customer_email, customer_phone, event_name)
+    if (isDuplicate) {
+      console.warn('Duplicate submission detected:', { email: customer_email, ip: clientIP })
+      submissionData.blocked_reason = 'Duplicate submission detected'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'A similar request was recently submitted. Please wait before submitting again.' },
+        { status: 400 }
+      )
+    }
+
+    // Validate field lengths to prevent spam
+    if (customer_name.length < 2 || customer_name.length > 100) {
+      submissionData.blocked_reason = 'Invalid name length'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'Invalid name format' },
+        { status: 400 }
+      )
+    }
+    if (description.length < 10 || description.length > 5000) {
+      submissionData.blocked_reason = 'Invalid description length'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'Description must be between 10 and 5000 characters' },
+        { status: 400 }
+      )
+    }
+    if (parseInt(quantity) < 1 || parseInt(quantity) > 10000) {
+      submissionData.blocked_reason = 'Invalid quantity'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'Quantity must be between 1 and 10,000' },
         { status: 400 }
       )
     }
@@ -241,29 +356,27 @@ export async function POST(request: NextRequest) {
       description: sanitize(description),
     }
 
-    // Verify CAPTCHA
-    if (captcha_token) {
-      const isValidCaptcha = await verifyCaptcha(captcha_token)
-      submissionData.captcha_passed = isValidCaptcha
-      if (!isValidCaptcha) {
-        console.warn('CAPTCHA verification failed', { ip: clientIP, email: customer_email })
-        submissionData.blocked_reason = 'CAPTCHA verification failed'
-        await logSubmission(submissionData)
-        return NextResponse.json(
-          { success: false, error: 'CAPTCHA verification failed. Please try again.' },
-          { status: 400 }
-        )
-      }
-    } else {
-      // In production, require CAPTCHA
-      if (process.env.NODE_ENV === 'production') {
-        submissionData.blocked_reason = 'CAPTCHA token missing'
-        await logSubmission(submissionData)
-        return NextResponse.json(
-          { success: false, error: 'CAPTCHA verification is required' },
-          { status: 400 }
-        )
-      }
+    // ALWAYS require CAPTCHA - no exceptions
+    if (!captcha_token) {
+      console.warn('CAPTCHA token missing', { ip: clientIP, email: customer_email })
+      submissionData.blocked_reason = 'CAPTCHA token missing'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'CAPTCHA verification is required. Please complete the CAPTCHA.' },
+        { status: 400 }
+      )
+    }
+
+    const isValidCaptcha = await verifyCaptcha(captcha_token)
+    submissionData.captcha_passed = isValidCaptcha
+    if (!isValidCaptcha) {
+      console.warn('CAPTCHA verification failed', { ip: clientIP, email: customer_email })
+      submissionData.blocked_reason = 'CAPTCHA verification failed'
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'CAPTCHA verification failed. Please try again.' },
+        { status: 400 }
+      )
     }
 
     // Insert into Supabase

@@ -76,11 +76,11 @@ export default function CustomRequestPage() {
       return
     }
 
-    // Check minimum form fill time (at least 5 seconds)
+    // Check minimum form fill time (at least 10 seconds - stricter)
     const formFillTime = Date.now() - formStartTime
-    if (formFillTime < 5000) {
-      console.warn('Suspicious: Form submitted too quickly')
-      setError('Please take your time filling out the form.')
+    if (formFillTime < 10000) {
+      console.warn('Suspicious: Form submitted too quickly', formFillTime)
+      setError(`Please take at least 10 seconds to fill out the form. You've only spent ${Math.round(formFillTime / 1000)} seconds.`)
       return
     }
     
