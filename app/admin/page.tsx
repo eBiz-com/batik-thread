@@ -753,6 +753,13 @@ export default function AdminDashboard() {
             JTD eBiz Card™
           </Link>
           <Link
+            href="/admin/submission-logs"
+            className="px-6 py-3 font-semibold transition-colors flex items-center gap-2 text-gray-400 hover:text-gold border-b-2 border-transparent hover:border-gold"
+          >
+            <AlertTriangle size={20} />
+            Security Logs
+          </Link>
+          <Link
             href="/admin/receipts"
             className="px-6 py-3 font-semibold transition-colors flex items-center gap-2 text-gray-400 hover:text-gold border-b-2 border-transparent hover:border-gold"
           >
