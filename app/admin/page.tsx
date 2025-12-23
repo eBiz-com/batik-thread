@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, Product, CustomRequest } from '@/lib/supabase'
-import { LogOut, Plus, Trash2, Edit, Package, FileText, Database, Settings, Upload, Image as ImageIcon, X, DollarSign, RefreshCw, QrCode } from 'lucide-react'
+import { LogOut, Plus, Trash2, Edit, Package, FileText, Database, Settings, Upload, Image as ImageIcon, X, DollarSign, RefreshCw, QrCode, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { getSettings, saveSettings, StoreSettings } from '@/lib/settings'
 

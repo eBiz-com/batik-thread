@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Upload, Calendar, Users, Ruler, Image as ImageIcon, Loader2, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import ReCAPTCHA from 'react-google-recaptcha'
@@ -24,7 +24,22 @@ export default function CustomRequestPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [formStartTime] = useState(() => Date.now())
   const [honeypot, setHoneypot] = useState('')
+  const [deviceFingerprint, setDeviceFingerprint] = useState<string>('')
   const recaptchaRef = useRef<ReCAPTCHA>(null)
+
+  // Generate device fingerprint on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const fingerprint = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        navigator.platform,
+      ].join('|')
+      setDeviceFingerprint(btoa(fingerprint).substring(0, 32))
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -105,6 +120,7 @@ export default function CustomRequestPage() {
           style_images: imageUrls,
           captcha_token: captchaToken,
           form_fill_time: Date.now() - formStartTime,
+          device_fingerprint: deviceFingerprint,
         }),
       })
 
