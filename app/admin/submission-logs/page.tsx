@@ -55,8 +55,20 @@ export default function SubmissionLogsPage() {
 
       if (error) {
         console.error('Error fetching logs:', error)
+        // Check if table doesn't exist
+        if (error.message?.includes('relation "submission_logs" does not exist') || 
+            error.code === '42P01' ||
+            error.message?.includes('submission_logs')) {
+          setLogs([])
+          // Show alert only once
+          if (logs.length === 0) {
+            alert('⚠️ submission_logs table does not exist!\n\nPlease run CREATE_SUBMISSION_LOGS_TABLE.sql in Supabase SQL Editor to enable logging.\n\nThis table is needed to track all form submission attempts.')
+          }
+        }
       } else if (data) {
-        setLogs(data)
+        setLogs(data || [])
+      } else {
+        setLogs([])
       }
     } catch (error) {
       console.error('Error:', error)
