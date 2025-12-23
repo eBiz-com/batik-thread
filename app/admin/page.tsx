@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, Product, CustomRequest } from '@/lib/supabase'
-import { LogOut, Plus, Trash2, Edit, Package, FileText, Database, Settings, Upload, Image as ImageIcon, X, DollarSign, RefreshCw } from 'lucide-react'
+import { LogOut, Plus, Trash2, Edit, Package, FileText, Database, Settings, Upload, Image as ImageIcon, X, DollarSign, RefreshCw, QrCode } from 'lucide-react'
 import Link from 'next/link'
 import { getSettings, saveSettings, StoreSettings } from '@/lib/settings'
 
@@ -709,6 +709,13 @@ export default function AdminDashboard() {
             <DollarSign size={20} />
             Payments & Receipts
           </button>
+          <Link
+            href="/admin/heritage-card"
+            className="px-6 py-3 font-semibold transition-colors flex items-center gap-2 text-gray-400 hover:text-gold border-b-2 border-transparent hover:border-gold"
+          >
+            <QrCode size={20} />
+            HeritageCard™
+          </Link>
           <Link
             href="/admin/receipts"
             className="px-6 py-3 font-semibold transition-colors flex items-center gap-2 text-gray-400 hover:text-gold border-b-2 border-transparent hover:border-gold"
