@@ -277,7 +277,7 @@ export default function HeritageCardAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-amber-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-amber-50 no-print">
       {/* Header */}
       <div className="bg-white shadow-md border-b border-amber-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -327,7 +327,7 @@ export default function HeritageCardAdmin() {
                       type="text"
                       value={settings.company_name}
                       onChange={(e) => setSettings(prev => ({ ...prev, company_name: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                     />
                   </div>
                   
@@ -337,7 +337,7 @@ export default function HeritageCardAdmin() {
                       type="text"
                       value={settings.company_theme}
                       onChange={(e) => setSettings(prev => ({ ...prev, company_theme: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                     />
                   </div>
                   
@@ -347,7 +347,7 @@ export default function HeritageCardAdmin() {
                       type="text"
                       value={settings.company_tagline}
                       onChange={(e) => setSettings(prev => ({ ...prev, company_tagline: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                     />
                   </div>
                   
@@ -391,7 +391,7 @@ export default function HeritageCardAdmin() {
                         type="text"
                         value={settings.location_city}
                         onChange={(e) => setSettings(prev => ({ ...prev, location_city: e.target.value }))}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                       />
                     </div>
                     <div>
@@ -400,7 +400,7 @@ export default function HeritageCardAdmin() {
                         type="text"
                         value={settings.location_state}
                         onChange={(e) => setSettings(prev => ({ ...prev, location_state: e.target.value }))}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                       />
                     </div>
                   </div>
@@ -411,7 +411,7 @@ export default function HeritageCardAdmin() {
                       type="tel"
                       value={settings.phone_number}
                       onChange={(e) => setSettings(prev => ({ ...prev, phone_number: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                     />
                   </div>
                   
@@ -421,7 +421,7 @@ export default function HeritageCardAdmin() {
                       type="tel"
                       value={settings.whatsapp_number}
                       onChange={(e) => setSettings(prev => ({ ...prev, whatsapp_number: e.target.value }))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                     />
                   </div>
                 </div>
@@ -458,7 +458,7 @@ export default function HeritageCardAdmin() {
                         value={settings.website_url || ''}
                         onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
                         placeholder="https://example.com"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                       />
                     )}
                   </div>
@@ -490,14 +490,14 @@ export default function HeritageCardAdmin() {
                           value={settings.event_name || ''}
                           onChange={(e) => setSettings(prev => ({ ...prev, event_name: e.target.value }))}
                           placeholder="Event Name"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                         />
                         <input
                           type="text"
                           value={settings.event_address || ''}
                           onChange={(e) => setSettings(prev => ({ ...prev, event_address: e.target.value }))}
                           placeholder="Full Event Address"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                         />
                       </div>
                     )}
@@ -529,7 +529,7 @@ export default function HeritageCardAdmin() {
                         value={settings.stand_number || ''}
                         onChange={(e) => setSettings(prev => ({ ...prev, stand_number: e.target.value }))}
                         placeholder="Stand #"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                       />
                     )}
                   </div>
@@ -623,7 +623,11 @@ export default function HeritageCardAdmin() {
           @media print {
             @page {
               size: 3.5in 2in;
-              margin: 0.5in;
+              margin: 0.25in;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             body * {
               visibility: hidden;
@@ -631,48 +635,58 @@ export default function HeritageCardAdmin() {
             .print-card-front,
             .print-card-back {
               visibility: visible !important;
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0.5in !important;
+              background: white !important;
             }
             .print-card-front {
               page-break-after: always;
+            }
+            .print-card-back {
+              page-break-before: always;
+            }
+            .no-print {
+              display: none !important;
             }
           }
         `}} />
         
         {/* Front of Card */}
-        <div ref={printFrontRef} className="print-card-front min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 p-8">
-          <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center border-4 border-amber-300">
+        <div ref={printFrontRef} className="print-card-front flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-full w-full text-center border-4 border-amber-300">
             {settings.company_logo_url && (
-              <img src={settings.company_logo_url} alt={settings.company_name} className="w-32 h-32 mx-auto mb-6 object-contain" />
+              <img src={settings.company_logo_url} alt={settings.company_name} className="w-24 h-24 mx-auto mb-4 object-contain" />
             )}
-            <h1 className="text-4xl font-bold text-amber-900 mb-3">{settings.company_name}</h1>
-            <p className="text-xl text-amber-700 mb-2 font-semibold">{settings.company_theme}</p>
-            <p className="text-sm text-gray-600 mb-6">{settings.company_tagline}</p>
-            <div className="border-t border-amber-200 pt-6">
-              <p className="text-gray-700 text-lg">{settings.location_city}, {settings.location_state}</p>
+            <h1 className="text-3xl font-bold text-amber-900 mb-2">{settings.company_name}</h1>
+            <p className="text-lg text-amber-700 mb-1 font-semibold">{settings.company_theme}</p>
+            <p className="text-xs text-gray-600 mb-4">{settings.company_tagline}</p>
+            <div className="border-t border-amber-200 pt-4">
+              <p className="text-gray-700 text-base">{settings.location_city}, {settings.location_state}</p>
             </div>
           </div>
         </div>
 
         {/* Back of Card */}
-        <div ref={printBackRef} className="print-card-back min-h-screen flex flex-col items-center justify-center bg-white p-8">
-          <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-md w-full text-center border-4 border-amber-300">
-            <h2 className="text-2xl font-bold text-amber-900 mb-6">Scan for Contact Info</h2>
-            <div className="flex justify-center mb-6">
+        <div ref={printBackRef} className="print-card-back flex flex-col items-center justify-center bg-white">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-full w-full text-center border-4 border-amber-300">
+            <h2 className="text-xl font-bold text-amber-900 mb-4">Scan for Contact Info</h2>
+            <div className="flex justify-center mb-4">
               {getQRCodeValue() && (
                 <QRCodeSVG
                   value={getQRCodeValue()}
-                  size={250}
+                  size={200}
                   level="H"
                   includeMargin={true}
                 />
               )}
             </div>
-            <p className="text-sm text-gray-600 font-medium">Scan with your phone camera</p>
-            <p className="text-xs text-gray-500 mt-2">HeritageCard™</p>
+            <p className="text-xs text-gray-600 font-medium">Scan with your phone camera</p>
+            <p className="text-xs text-gray-500 mt-1">HeritageCard™</p>
           </div>
         </div>
       </div>
