@@ -477,22 +477,6 @@ export default function HeritageCardAdmin() {
                         <div className="grid grid-cols-2 gap-3">
                           <input
                             type="text"
-                            value={settings.website_name || ''}
-                            onChange={(e) => setSettings(prev => ({ ...prev, website_name: e.target.value }))}
-                            placeholder="Website Link Name"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
-                          />
-                          <input
-                            type="url"
-                            value={settings.website_url || ''}
-                            onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
-                            placeholder="https://example.com"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <input
-                            type="text"
                             value={settings.event_website_name || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, event_website_name: e.target.value }))}
                             placeholder="Event Website Link Name"
@@ -674,29 +658,20 @@ export default function HeritageCardAdmin() {
           .print-card-back * {
             visibility: visible !important;
           }
-          svg {
+          .print-card-back svg,
+          .print-card-back svg * {
             visibility: visible !important;
             display: block !important;
+            opacity: 1 !important;
             print-color-adjust: exact !important;
             -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
-          .print-card-back svg {
+          .print-card-back svg path,
+          .print-card-back svg rect {
             fill: #000000 !important;
             stroke: #000000 !important;
-          }
-          .print-card-back svg path {
-            fill: #000000 !important;
-            stroke: #000000 !important;
-          }
-          svg {
-            visibility: visible !important;
-            display: block !important;
-            print-color-adjust: exact !important;
-            -webkit-print-color-adjust: exact !important;
-          }
-          .print-card-back svg {
-            fill: #000000 !important;
-            stroke: #000000 !important;
+            stroke-width: 0 !important;
           }
         }
         @media screen {
@@ -732,7 +707,11 @@ export default function HeritageCardAdmin() {
         <div ref={printBackRef} className="print-card-back flex flex-col items-center justify-center bg-white">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-full w-full text-center border-4 border-amber-300">
             <h2 className="text-xl font-bold text-amber-900 mb-4">Scan for Contact Info</h2>
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-4" style={{ 
+              backgroundColor: '#FFFFFF',
+              padding: '10px',
+              display: 'inline-block'
+            }}>
               {getQRCodeValue() && (
                 <QRCodeSVG
                   value={getQRCodeValue()}
@@ -741,12 +720,6 @@ export default function HeritageCardAdmin() {
                   includeMargin={true}
                   fgColor="#000000"
                   bgColor="#FFFFFF"
-                  imageSettings={{
-                    src: '',
-                    height: 0,
-                    width: 0,
-                    excavate: false,
-                  }}
                 />
               )}
             </div>

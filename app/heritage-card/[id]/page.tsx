@@ -168,20 +168,6 @@ export default function HeritageCardPage() {
                     <span className="text-xs text-amber-600">Open Map</span>
                   </button>
                 )}
-                {settings.website_url && (
-                  <a
-                    href={settings.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-left mb-3"
-                  >
-                    <Globe className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                    <p className="text-sm text-blue-700 flex-1">
-                      {settings.website_name || settings.company_name || 'Visit Website'}
-                    </p>
-                    <span className="text-xs text-blue-600">Visit</span>
-                  </a>
-                )}
                 {settings.event_website_url && (
                   <a
                     href={settings.event_website_url}
