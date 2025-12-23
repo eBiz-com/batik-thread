@@ -726,7 +726,6 @@ export default function HeritageCardAdmin() {
                   includeMargin={true}
                   fgColor="#000000"
                   bgColor="#FFFFFF"
-                  renderAs="svg"
                 />
               )}
             </div>
