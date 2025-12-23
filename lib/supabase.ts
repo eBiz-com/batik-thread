@@ -104,6 +104,8 @@ export interface ContactCardSettings {
   show_event: boolean
   event_name?: string
   event_address?: string
+  event_website_url?: string
+  event_website_name?: string
   show_stand_number: boolean
   stand_number?: string
   qr_code_url?: string

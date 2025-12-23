@@ -179,12 +179,26 @@ export default function HeritageCardPage() {
                 {settings.event_address && (
                   <button
                     onClick={handleMapClick}
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left mb-3"
                   >
                     <MapPin className="w-5 h-5 text-amber-600 flex-shrink-0" />
                     <p className="text-sm text-gray-700 flex-1">{settings.event_address}</p>
                     <span className="text-xs text-amber-600">Open Map</span>
                   </button>
+                )}
+                {settings.event_website_url && (
+                  <a
+                    href={settings.event_website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-left"
+                  >
+                    <Globe className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <p className="text-sm text-blue-700 flex-1">
+                      {settings.event_website_name || 'Event Website'}
+                    </p>
+                    <span className="text-xs text-blue-600">Visit</span>
+                  </a>
                 )}
               </div>
             )}

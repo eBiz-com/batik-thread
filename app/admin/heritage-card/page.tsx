@@ -31,6 +31,8 @@ export default function HeritageCardAdmin() {
     show_event: false,
     event_name: '',
     event_address: '',
+    event_website_url: '',
+    event_website_name: '',
     show_stand_number: false,
     stand_number: '',
     qr_code_url: '',
@@ -105,6 +107,8 @@ export default function HeritageCardAdmin() {
           show_event: data.show_event || false,
           event_name: data.event_name || '',
           event_address: data.event_address || '',
+          event_website_url: data.event_website_url || '',
+          event_website_name: data.event_website_name || '',
           show_stand_number: data.show_stand_number || false,
           stand_number: data.stand_number || '',
           qr_code_url: data.qr_code_url || '',
@@ -147,6 +151,8 @@ export default function HeritageCardAdmin() {
         show_event: settings.show_event,
         event_name: settings.event_name || null,
         event_address: settings.event_address || null,
+        event_website_url: settings.event_website_url || null,
+        event_website_name: settings.event_website_name || null,
         show_stand_number: settings.show_stand_number,
         stand_number: settings.stand_number || null,
         qr_code_url: qrUrl,
@@ -497,6 +503,22 @@ export default function HeritageCardAdmin() {
                           placeholder="Full Event Address"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                         />
+                        <div className="grid grid-cols-2 gap-3">
+                          <input
+                            type="text"
+                            value={settings.event_website_name || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, event_website_name: e.target.value }))}
+                            placeholder="Website Link Name"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                          />
+                          <input
+                            type="url"
+                            value={settings.event_website_url || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, event_website_url: e.target.value }))}
+                            placeholder="https://event-website.com"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -706,6 +728,14 @@ export default function HeritageCardAdmin() {
                   size={200}
                   level="H"
                   includeMargin={true}
+                  fgColor="#000000"
+                  bgColor="#FFFFFF"
+                  imageSettings={{
+                    src: '',
+                    height: 0,
+                    width: 0,
+                    excavate: false,
+                  }}
                 />
               )}
             </div>
