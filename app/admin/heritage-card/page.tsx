@@ -629,22 +629,30 @@ export default function HeritageCardAdmin() {
             height: 100% !important;
             background: white !important;
           }
-          body * {
-            visibility: hidden !important;
+          body > *:not(.print-only) {
+            display: none !important;
           }
-          .print-card-front,
-          .print-card-back {
-            visibility: visible !important;
-            display: flex !important;
-            position: absolute !important;
+          .print-only {
+            display: block !important;
+            position: relative !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            height: 100% !important;
+            visibility: visible !important;
+          }
+          .print-card-front,
+          .print-card-back {
+            display: flex !important;
+            position: relative !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            min-height: 100vh !important;
             margin: 0 !important;
             padding: 0.5in !important;
             background: white !important;
             page-break-inside: avoid !important;
+            visibility: visible !important;
           }
           .print-card-front {
             page-break-after: always !important;
