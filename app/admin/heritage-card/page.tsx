@@ -438,46 +438,6 @@ export default function HeritageCardAdmin() {
                 <h2 className="text-xl font-bold text-amber-900 mb-4">Optional Sections</h2>
                 
                 <div className="space-y-4">
-                  {/* Website Section */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="flex items-center gap-2 font-medium text-gray-700">
-                        <Globe className="w-4 h-4" />
-                        Show Website Link
-                      </label>
-                      <button
-                        onClick={() => setSettings(prev => ({ ...prev, show_website: !prev.show_website }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          settings.show_website ? 'bg-amber-600' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            settings.show_website ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                    {settings.show_website && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          value={settings.website_name || ''}
-                          onChange={(e) => setSettings(prev => ({ ...prev, website_name: e.target.value }))}
-                          placeholder="Website Link Name"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
-                        />
-                        <input
-                          type="url"
-                          value={settings.website_url || ''}
-                          onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
-                          placeholder="https://example.com"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
-                        />
-                      </div>
-                    )}
-                  </div>
-
                   {/* Event Section */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -517,9 +477,25 @@ export default function HeritageCardAdmin() {
                         <div className="grid grid-cols-2 gap-3">
                           <input
                             type="text"
+                            value={settings.website_name || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, website_name: e.target.value }))}
+                            placeholder="Website Link Name"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                          />
+                          <input
+                            type="url"
+                            value={settings.website_url || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
+                            placeholder="https://example.com"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input
+                            type="text"
                             value={settings.event_website_name || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, event_website_name: e.target.value }))}
-                            placeholder="Website Link Name"
+                            placeholder="Event Website Link Name"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
                           />
                           <input

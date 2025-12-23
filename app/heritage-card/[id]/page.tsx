@@ -168,7 +168,7 @@ export default function HeritageCardPage() {
                     <span className="text-xs text-amber-600">Open Map</span>
                   </button>
                 )}
-                {settings.show_website && settings.website_url && (
+                {settings.website_url && (
                   <a
                     href={settings.website_url}
                     target="_blank"
