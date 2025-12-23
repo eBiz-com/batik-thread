@@ -1,18 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import { supabase, ContactCardSettings } from '@/lib/supabase'
 import { Phone, MessageCircle, Globe, MapPin, Building2, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-export default function HeritageCardPage({ params }: { params: { id: string } }) {
+export default function HeritageCardPage() {
+  const params = useParams()
+  const cardId = params.id as string
   const [settings, setSettings] = useState<ContactCardSettings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchCardSettings()
-  }, [params.id])
+    if (cardId) {
+      fetchCardSettings()
+    }
+  }, [cardId])
 
   const fetchCardSettings = async () => {
     setIsLoading(true)
@@ -20,7 +25,7 @@ export default function HeritageCardPage({ params }: { params: { id: string } })
       const { data, error: fetchError } = await supabase
         .from('contact_card_settings')
         .select('*')
-        .eq('card_id', params.id)
+        .eq('card_id', cardId)
         .single()
 
       if (fetchError) {
