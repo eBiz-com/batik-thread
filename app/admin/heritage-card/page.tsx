@@ -49,7 +49,7 @@ export default function HeritageCardAdmin() {
         fetchSettings()
       }
     }
-  }, [])
+  }, [cardId])
 
   const handleLogin = () => {
     if (username === 'admin' && password === 'batik2025') {
@@ -78,18 +78,49 @@ export default function HeritageCardAdmin() {
         .eq('card_id', cardId)
         .single()
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error fetching settings:', error)
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows returned - use default values
+          console.log('No existing settings found, using defaults')
+          // Keep the default state values
+        } else {
+          console.error('Error fetching settings:', error)
+          alert(`Error loading settings: ${error.message}`)
+        }
       } else if (data) {
-        setSettings(data)
+        console.log('Loaded settings:', data)
+        // Update settings with fetched data
+        setSettings({
+          id: data.id || 0,
+          company_name: data.company_name || 'Batik & Thread',
+          company_theme: data.company_theme || 'Modern African Luxury Boutique',
+          company_tagline: data.company_tagline || 'Smart Signage. Bold. Refined. Rooted in Heritage.',
+          company_logo_url: data.company_logo_url || '',
+          location_city: data.location_city || 'Kissimmee',
+          location_state: data.location_state || 'FL',
+          phone_number: data.phone_number || '+1 (321) 961-6566',
+          whatsapp_number: data.whatsapp_number || '+1 (321) 961-6566',
+          show_website: data.show_website || false,
+          website_url: data.website_url || '',
+          show_event: data.show_event || false,
+          event_name: data.event_name || '',
+          event_address: data.event_address || '',
+          show_stand_number: data.show_stand_number || false,
+          stand_number: data.stand_number || '',
+          qr_code_url: data.qr_code_url || '',
+          card_id: data.card_id || 'default',
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at,
+        })
         // Generate QR code URL if not set
-        if (!data.qr_code_url) {
-          const qrUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/heritage-card/${data.card_id}`
+        if (!data.qr_code_url && typeof window !== 'undefined') {
+          const qrUrl = `${window.location.origin}/heritage-card/${data.card_id || 'default'}`
           setSettings(prev => ({ ...prev, qr_code_url: qrUrl }))
         }
       }
     } catch (error) {
       console.error('Error:', error)
+      alert('Failed to load settings. Please refresh the page.')
     } finally {
       setIsLoading(false)
     }
@@ -101,45 +132,71 @@ export default function HeritageCardAdmin() {
       // Generate QR code URL
       const qrUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/heritage-card/${settings.card_id}`
       
-      const updateData = {
-        ...settings,
+      // Prepare update data, excluding id and timestamps for insert
+      const saveData: any = {
+        company_name: settings.company_name,
+        company_theme: settings.company_theme,
+        company_tagline: settings.company_tagline,
+        company_logo_url: settings.company_logo_url || null,
+        location_city: settings.location_city,
+        location_state: settings.location_state,
+        phone_number: settings.phone_number,
+        whatsapp_number: settings.whatsapp_number,
+        show_website: settings.show_website,
+        website_url: settings.website_url || null,
+        show_event: settings.show_event,
+        event_name: settings.event_name || null,
+        event_address: settings.event_address || null,
+        show_stand_number: settings.show_stand_number,
+        stand_number: settings.stand_number || null,
         qr_code_url: qrUrl,
+        card_id: settings.card_id,
         updated_at: new Date().toISOString(),
       }
 
       // Check if record exists
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('contact_card_settings')
         .select('id')
         .eq('card_id', settings.card_id)
-        .single()
+        .maybeSingle()
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing record:', checkError)
+        alert(`Error: ${checkError.message}`)
+        setIsSaving(false)
+        return
+      }
 
       let error
       if (existing) {
         // Update existing
+        console.log('Updating existing record:', existing.id)
         const { error: updateError } = await supabase
           .from('contact_card_settings')
-          .update(updateData)
+          .update(saveData)
           .eq('card_id', settings.card_id)
         error = updateError
       } else {
         // Insert new
+        console.log('Inserting new record')
         const { error: insertError } = await supabase
           .from('contact_card_settings')
-          .insert([updateData])
+          .insert([saveData])
         error = insertError
       }
 
       if (error) {
         console.error('Error saving settings:', error)
-        alert('Error saving settings. Check console for details.')
+        alert(`Error saving settings: ${error.message}`)
       } else {
         alert('Settings saved successfully!')
-        fetchSettings()
+        // Reload settings to get the updated data
+        await fetchSettings()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error)
-      alert('Error saving settings')
+      alert(`Error saving settings: ${error.message || 'Unknown error'}`)
     } finally {
       setIsSaving(false)
     }
