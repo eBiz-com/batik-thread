@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Upload, Calendar, Users, Ruler, Image as ImageIcon, Loader2, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
-import ReCAPTCHA from 'react-google-recaptcha'
 
 export default function CustomRequestPage() {
   const [formData, setFormData] = useState({
@@ -21,11 +20,10 @@ export default function CustomRequestPage() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [formStartTime] = useState(() => Date.now())
   const [honeypot, setHoneypot] = useState('')
   const [deviceFingerprint, setDeviceFingerprint] = useState<string>('')
-  const recaptchaRef = useRef<ReCAPTCHA>(null)
+  const [confirmed, setConfirmed] = useState(false)
 
   // Generate device fingerprint on mount
   useEffect(() => {
@@ -84,9 +82,9 @@ export default function CustomRequestPage() {
       return
     }
     
-    // Verify CAPTCHA
-    if (!captchaToken) {
-      setError('Please complete the CAPTCHA verification')
+    // Verify confirmation checkbox
+    if (!confirmed) {
+      setError('Please confirm that you want to proceed with this request by checking the confirmation box.')
       return
     }
 
@@ -118,9 +116,9 @@ export default function CustomRequestPage() {
           ...formData,
           quantity: parseInt(formData.quantity),
           style_images: imageUrls,
-          captcha_token: captchaToken,
           form_fill_time: Date.now() - formStartTime,
           device_fingerprint: deviceFingerprint,
+          confirmed: confirmed,
         }),
       })
 
@@ -141,21 +139,14 @@ export default function CustomRequestPage() {
         })
         setImages([])
         setImagePreviews([])
-        setCaptchaToken(null)
-        // Reset CAPTCHA
-        if (recaptchaRef.current) {
-          recaptchaRef.current.reset()
-        }
+        setConfirmed(false)
       } else {
         throw new Error(data.error || 'Failed to submit request')
       }
     } catch (err: any) {
       setError(err.message || 'Failed to submit request. Please try again.')
-      // Reset CAPTCHA on error
-      if (recaptchaRef.current) {
-        recaptchaRef.current.reset()
-      }
-      setCaptchaToken(null)
+      // Reset confirmation on error
+      setConfirmed(false)
     } finally {
       setLoading(false)
     }
@@ -447,7 +438,7 @@ export default function CustomRequestPage() {
               </Link>
               <button
                 type="submit"
-                disabled={loading || !captchaToken}
+                disabled={loading || !confirmed}
                 className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (

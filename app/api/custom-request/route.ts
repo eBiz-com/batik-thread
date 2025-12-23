@@ -20,7 +20,7 @@ async function logSubmission(data: {
   email: string
   customer_name: string
   form_fill_time: number | undefined
-  captcha_passed: boolean
+    captcha_passed: false
   honeypot_triggered: boolean
   blocked_reason: string | null
   success: boolean
@@ -79,63 +79,7 @@ async function checkRateLimit(ip: string, email: string): Promise<{ allowed: boo
   return { allowed: true, reason: null }
 }
 
-async function verifyCaptcha(token: string): Promise<boolean> {
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY
-  
-  // Check if using test key (always allow test key for development)
-  const testSiteKey = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
-  const testSecretKey = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
-  
-  // If no secret key is set, check if using test key
-  if (!secretKey) {
-    // Allow test key to work without secret key in development
-    if (token && token.length > 10) {
-      console.warn('RECAPTCHA_SECRET_KEY not set - allowing test key for development')
-      return true // Allow test submissions in development
-    }
-    console.warn('RECAPTCHA_SECRET_KEY not set and no valid token - BLOCKING submission')
-    return false
-  }
-
-  if (!token || token.length < 10) {
-    console.warn('Invalid CAPTCHA token format')
-    return false
-  }
-
-  // If using test secret key, always allow
-  if (secretKey === testSecretKey) {
-    console.log('Test CAPTCHA key detected - allowing submission')
-    return true
-  }
-
-  try {
-    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `secret=${secretKey}&response=${token}`,
-    })
-
-    const data = await response.json()
-    
-    // Check score for v3 (if applicable) or success for v2
-    if (data.success === true) {
-      // Additional check: score should be > 0.5 for v3
-      if (data.score !== undefined && data.score < 0.5) {
-        console.warn('CAPTCHA score too low:', data.score)
-        return false
-      }
-      return true
-    }
-    
-    console.warn('CAPTCHA verification failed:', data)
-    return false
-  } catch (error) {
-    console.error('Error verifying CAPTCHA:', error)
-    return false
-  }
-}
+// CAPTCHA verification removed - using confirmation checkbox instead
 
 // Check for duplicate submissions
 async function checkDuplicateSubmission(email: string, phone: string, eventName: string): Promise<boolean> {
@@ -187,10 +131,10 @@ export async function POST(request: NextRequest) {
       sizes,
       description,
       style_images,
-      captcha_token,
       form_fill_time,
       website, // Honeypot field
       device_fingerprint,
+      confirmed, // Confirmation checkbox
     } = body
 
     submissionData.email = customer_email?.toLowerCase() || ''
@@ -372,25 +316,13 @@ export async function POST(request: NextRequest) {
       description: sanitize(description),
     }
 
-    // Require CAPTCHA token
-    if (!captcha_token) {
-      console.warn('CAPTCHA token missing', { ip: clientIP, email: customer_email })
-      submissionData.blocked_reason = 'CAPTCHA token missing'
+    // Require confirmation checkbox
+    if (!confirmed) {
+      console.warn('Confirmation checkbox not checked', { ip: clientIP, email: customer_email })
+      submissionData.blocked_reason = 'Confirmation checkbox not checked'
       await logSubmission(submissionData)
       return NextResponse.json(
-        { success: false, error: 'CAPTCHA verification is required. Please complete the CAPTCHA.' },
-        { status: 400 }
-      )
-    }
-
-    const isValidCaptcha = await verifyCaptcha(captcha_token)
-    submissionData.captcha_passed = isValidCaptcha
-    if (!isValidCaptcha) {
-      console.warn('CAPTCHA verification failed', { ip: clientIP, email: customer_email, tokenLength: captcha_token?.length })
-      submissionData.blocked_reason = 'CAPTCHA verification failed'
-      await logSubmission(submissionData)
-      return NextResponse.json(
-        { success: false, error: 'CAPTCHA verification failed. Please complete the CAPTCHA and try again.' },
+        { success: false, error: 'Please confirm that you want to proceed with this request.' },
         { status: 400 }
       )
     }
