@@ -203,7 +203,7 @@ export default function HeritageCardPage() {
 
           {/* Footer */}
           <div className="bg-amber-50 p-6 text-center border-t border-amber-200">
-            <p className="text-xs text-gray-600">HeritageCard™ by {settings.company_name}</p>
+            <p className="text-xs text-gray-600">JTD eBiz Card™ by {settings.company_name}</p>
           </div>
         </div>
 

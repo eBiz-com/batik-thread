@@ -714,7 +714,7 @@ export default function AdminDashboard() {
             className="px-6 py-3 font-semibold transition-colors flex items-center gap-2 text-gray-400 hover:text-gold border-b-2 border-transparent hover:border-gold"
           >
             <QrCode size={20} />
-            HeritageCard™
+            JTD eBiz Card™
           </Link>
           <Link
             href="/admin/receipts"

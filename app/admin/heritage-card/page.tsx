@@ -215,10 +215,8 @@ export default function HeritageCardAdmin() {
   }
 
   const handlePrint = () => {
-    setShowPrintPreview(true)
-    setTimeout(() => {
-      window.print()
-    }, 100)
+    // Trigger print dialog
+    window.print()
   }
 
   const getQRCodeValue = () => {
@@ -232,7 +230,7 @@ export default function HeritageCardAdmin() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-amber-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-          <h1 className="text-3xl font-bold text-amber-900 mb-2 text-center">HeritageCard™ Admin</h1>
+          <h1 className="text-3xl font-bold text-amber-900 mb-2 text-center">JTD eBiz Card™ Admin</h1>
           <p className="text-gray-600 mb-6 text-center">Manage your digital contact card</p>
           
           <div className="space-y-4">
@@ -283,7 +281,7 @@ export default function HeritageCardAdmin() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-amber-900">HeritageCard™ Manager</h1>
+              <h1 className="text-2xl font-bold text-amber-900">JTD eBiz Card™ Manager</h1>
               <p className="text-sm text-gray-600">Manage your digital contact card</p>
             </div>
             <div className="flex gap-3">
@@ -629,6 +627,12 @@ export default function HeritageCardAdmin() {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
+            html, body {
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              height: 100%;
+            }
             body * {
               visibility: hidden;
             }
@@ -643,15 +647,18 @@ export default function HeritageCardAdmin() {
               margin: 0 !important;
               padding: 0.5in !important;
               background: white !important;
+              page-break-inside: avoid !important;
             }
             .print-card-front {
-              page-break-after: always;
+              page-break-after: always !important;
             }
             .print-card-back {
-              page-break-before: always;
+              page-break-before: always !important;
             }
-            .no-print {
+            .no-print,
+            .no-print * {
               display: none !important;
+              visibility: hidden !important;
             }
           }
         `}} />
@@ -686,7 +693,7 @@ export default function HeritageCardAdmin() {
               )}
             </div>
             <p className="text-xs text-gray-600 font-medium">Scan with your phone camera</p>
-            <p className="text-xs text-gray-500 mt-1">HeritageCard™</p>
+            <p className="text-xs text-gray-500 mt-1">JTD eBiz Card™</p>
           </div>
         </div>
       </div>
