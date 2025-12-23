@@ -239,6 +239,31 @@ export default function HeritageCardAdmin() {
     return ''
   }
 
+  // Generate QR code as image for better print compatibility
+  useEffect(() => {
+    const generateQRImage = async () => {
+      const qrValue = getQRCodeValue()
+      if (qrValue && typeof window !== 'undefined') {
+        try {
+          const dataUrl = await QRCode.toDataURL(qrValue, {
+            width: 400,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          })
+          setQrCodeImage(dataUrl)
+        } catch (error) {
+          console.error('Error generating QR code image:', error)
+        }
+      }
+    }
+    if (settings.card_id) {
+      generateQRImage()
+    }
+  }, [settings.card_id])
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-amber-50 flex items-center justify-center p-4">
