@@ -226,32 +226,61 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Block known test/spam emails
-    const blockedEmails = ['test@test.com', 'test@example.com', 'spam@spam.com', 'admin@test.com', 'user@test.com']
-    if (blockedEmails.includes(customer_email.toLowerCase())) {
-      console.warn('Blocked email detected:', { email: customer_email, ip: clientIP })
-      submissionData.blocked_reason = 'Blocked email address'
+    // Block known test/spam emails - STRICT BLOCKING
+    const blockedEmails = [
+      'test@test.com',
+      'test@example.com',
+      'spam@spam.com',
+      'admin@test.com',
+      'user@test.com',
+      'test@gmail.com',
+      'test@yahoo.com',
+      'test@hotmail.com',
+      'test@outlook.com',
+    ]
+    
+    const emailLower = customer_email.toLowerCase().trim()
+    
+    // Exact match blocking
+    if (blockedEmails.includes(emailLower)) {
+      console.warn('Blocked email detected (exact match):', { email: customer_email, ip: clientIP })
+      submissionData.blocked_reason = `Blocked email address: ${emailLower}`
       await logSubmission(submissionData)
       return NextResponse.json(
-        { success: false, error: 'Invalid email address' },
+        { success: false, error: 'This email address is not allowed. Please use a valid email address.' },
         { status: 400 }
       )
     }
 
-    // Check for suspicious patterns in email
+    // Check for suspicious patterns in email - STRICT
     const suspiciousPatterns = [
-      /^test\d*@/i,
-      /^admin\d*@/i,
-      /^user\d*@/i,
-      /@test\./i,
-      /@example\./i,
+      /^test\d*@/i,           // test, test1, test2, etc.
+      /^admin\d*@/i,         // admin, admin1, etc.
+      /^user\d*@/i,          // user, user1, etc.
+      /@test\./i,             // anything@test.com, anything@test.org, etc.
+      /@example\./i,          // anything@example.com
+      /test.*@.*test/i,       // test@test.com, test@testmail.com, etc.
+      /^test@/i,              // test@anything (catches test@test.com and variants)
     ]
-    if (suspiciousPatterns.some(pattern => pattern.test(customer_email))) {
+    
+    if (suspiciousPatterns.some(pattern => pattern.test(emailLower))) {
       console.warn('Suspicious email pattern detected:', { email: customer_email, ip: clientIP })
-      submissionData.blocked_reason = 'Suspicious email pattern'
+      submissionData.blocked_reason = `Suspicious email pattern: ${emailLower}`
       await logSubmission(submissionData)
       return NextResponse.json(
-        { success: false, error: 'Invalid email address' },
+        { success: false, error: 'This email address is not allowed. Please use a valid email address.' },
+        { status: 400 }
+      )
+    }
+    
+    // Additional check: Block if email contains "test" multiple times or in suspicious positions
+    const testCount = (emailLower.match(/test/g) || []).length
+    if (testCount >= 2) {
+      console.warn('Email contains multiple "test" occurrences:', { email: customer_email, ip: clientIP })
+      submissionData.blocked_reason = `Email contains multiple "test" occurrences: ${emailLower}`
+      await logSubmission(submissionData)
+      return NextResponse.json(
+        { success: false, error: 'This email address is not allowed. Please use a valid email address.' },
         { status: 400 }
       )
     }
