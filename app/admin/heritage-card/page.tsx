@@ -687,6 +687,16 @@ export default function HeritageCardAdmin() {
           .print-card-back * {
             visibility: visible !important;
           }
+          svg {
+            visibility: visible !important;
+            display: block !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+          }
+          .print-card-back svg {
+            fill: #000000 !important;
+            stroke: #000000 !important;
+          }
         }
         @media screen {
           .print-only {

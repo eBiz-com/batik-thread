@@ -163,7 +163,7 @@ export default function HeritageCardPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-gray-900">Visit Website</p>
-                  <p className="text-blue-700 text-sm truncate">{settings.website_url}</p>
+                  <p className="text-blue-700 text-sm">{settings.company_name || 'Our Website'}</p>
                 </div>
               </a>
             )}
