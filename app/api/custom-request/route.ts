@@ -135,7 +135,7 @@ async function checkDuplicateSubmission(email: string, phone: string, eventName:
       .gte('created_at', oneHourAgo)
       .limit(1)
     
-    return (data && data.length > 0)
+    return data ? data.length > 0 : false
   } catch (error) {
     console.error('Error checking duplicate:', error)
     return false // If check fails, allow submission but log it
