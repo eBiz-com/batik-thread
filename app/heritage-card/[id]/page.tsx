@@ -150,24 +150,6 @@ export default function HeritageCardPage() {
               </div>
             </button>
 
-            {/* Website Link - Only if enabled */}
-            {settings.show_website && settings.website_url && (
-              <a
-                href={settings.website_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center gap-4 p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors text-left"
-              >
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Globe className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">Visit Website</p>
-                  <p className="text-blue-700 text-sm">{settings.company_name || 'Our Website'}</p>
-                </div>
-              </a>
-            )}
-
             {/* Event Information - Only if enabled */}
             {settings.show_event && settings.event_name && (
               <div className="border-t border-gray-200 pt-6 mt-6">
@@ -185,6 +167,20 @@ export default function HeritageCardPage() {
                     <p className="text-sm text-gray-700 flex-1">{settings.event_address}</p>
                     <span className="text-xs text-amber-600">Open Map</span>
                   </button>
+                )}
+                {settings.show_website && settings.website_url && (
+                  <a
+                    href={settings.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-left mb-3"
+                  >
+                    <Globe className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <p className="text-sm text-blue-700 flex-1">
+                      {settings.website_name || settings.company_name || 'Visit Website'}
+                    </p>
+                    <span className="text-xs text-blue-600">Visit</span>
+                  </a>
                 )}
                 {settings.event_website_url && (
                   <a

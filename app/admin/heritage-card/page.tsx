@@ -28,6 +28,7 @@ export default function HeritageCardAdmin() {
     whatsapp_number: '+1 (321) 961-6566',
     show_website: false,
     website_url: '',
+    website_name: '',
     show_event: false,
     event_name: '',
     event_address: '',
@@ -457,13 +458,22 @@ export default function HeritageCardAdmin() {
                       </button>
                     </div>
                     {settings.show_website && (
-                      <input
-                        type="url"
-                        value={settings.website_url || ''}
-                        onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
-                        placeholder="https://example.com"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
-                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          value={settings.website_name || ''}
+                          onChange={(e) => setSettings(prev => ({ ...prev, website_name: e.target.value }))}
+                          placeholder="Website Link Name"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                        />
+                        <input
+                          type="url"
+                          value={settings.website_url || ''}
+                          onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
+                          placeholder="https://example.com"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-900"
+                        />
+                      </div>
                     )}
                   </div>
 

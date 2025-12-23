@@ -101,6 +101,7 @@ export interface ContactCardSettings {
   whatsapp_number: string
   show_website: boolean
   website_url?: string
+  website_name?: string
   show_event: boolean
   event_name?: string
   event_address?: string
