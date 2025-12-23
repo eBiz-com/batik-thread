@@ -105,6 +105,7 @@ export default function HeritageCardAdmin() {
           whatsapp_number: data.whatsapp_number || '+1 (321) 961-6566',
           show_website: data.show_website || false,
           website_url: data.website_url || '',
+          website_name: data.website_name || '',
           show_event: data.show_event || false,
           event_name: data.event_name || '',
           event_address: data.event_address || '',
