@@ -22,6 +22,8 @@ export default function CustomRequestPage() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [formStartTime] = useState(() => Date.now())
+  const [honeypot, setHoneypot] = useState('')
   const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -51,6 +53,21 @@ export default function CustomRequestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    
+    // Honeypot check - if filled, it's a bot
+    if (honeypot) {
+      console.warn('Bot detected: honeypot field was filled')
+      setError('Invalid submission detected. Please try again.')
+      return
+    }
+
+    // Check minimum form fill time (at least 5 seconds)
+    const formFillTime = Date.now() - formStartTime
+    if (formFillTime < 5000) {
+      console.warn('Suspicious: Form submitted too quickly')
+      setError('Please take your time filling out the form.')
+      return
+    }
     
     // Verify CAPTCHA
     if (!captchaToken) {
@@ -87,6 +104,7 @@ export default function CustomRequestPage() {
           quantity: parseInt(formData.quantity),
           style_images: imageUrls,
           captcha_token: captchaToken,
+          form_fill_time: Date.now() - formStartTime,
         }),
       })
 
@@ -156,7 +174,18 @@ export default function CustomRequestPage() {
             Request bulk sewing for your event. Fill out the form below and we'll get back to you with a quote.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+            {/* Honeypot field - hidden from users but visible to bots */}
+            <input
+              type="text"
+              name="website"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+
             {/* Customer Information */}
             <div className="space-y-4">
               <h2 className="text-xl font-serif text-gold border-b border-gold/20 pb-2">Customer Information</h2>
@@ -169,6 +198,9 @@ export default function CustomRequestPage() {
                   value={formData.customer_name}
                   onChange={handleInputChange}
                   required
+                  autoComplete="name"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                   placeholder="John Doe"
                 />
@@ -183,6 +215,9 @@ export default function CustomRequestPage() {
                     value={formData.customer_email}
                     onChange={handleInputChange}
                     required
+                    autoComplete="email"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                     placeholder="john@example.com"
                   />
@@ -195,6 +230,9 @@ export default function CustomRequestPage() {
                     value={formData.customer_phone}
                     onChange={handleInputChange}
                     required
+                    autoComplete="tel"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                     placeholder="+1 (321) 961-6566"
                   />
@@ -214,6 +252,9 @@ export default function CustomRequestPage() {
                   value={formData.event_name}
                   onChange={handleInputChange}
                   required
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                   placeholder="Wedding, Birthday Party, Corporate Event, etc."
                 />
@@ -231,6 +272,9 @@ export default function CustomRequestPage() {
                   onChange={handleInputChange}
                   required
                   min={new Date().toISOString().split('T')[0]}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                 />
               </div>
@@ -253,6 +297,9 @@ export default function CustomRequestPage() {
                     onChange={handleInputChange}
                     required
                     min="1"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                     placeholder="10"
                   />
@@ -268,6 +315,9 @@ export default function CustomRequestPage() {
                     value={formData.sizes}
                     onChange={handleInputChange}
                     required
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                     placeholder="S: 5, M: 10, L: 8, XL: 2"
                   />
@@ -283,6 +333,9 @@ export default function CustomRequestPage() {
                   onChange={handleInputChange}
                   required
                   rows={4}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-form-type="other"
                   className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border border-gold/30 focus:outline-none focus:border-gold"
                   placeholder="Describe your design preferences, fabric choices, colors, or any special requirements..."
                 />
