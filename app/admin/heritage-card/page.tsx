@@ -16,6 +16,7 @@ export default function HeritageCardAdmin() {
   const [isSaving, setIsSaving] = useState(false)
   const [showPrintPreview, setShowPrintPreview] = useState(false)
   const [cardId, setCardId] = useState<string>('default')
+  const [qrCodeImage, setQrCodeImage] = useState<string>('')
   
   const [settings, setSettings] = useState<ContactCardSettings>({
     id: 0,
@@ -560,15 +561,37 @@ export default function HeritageCardAdmin() {
                   QR Code
                 </h2>
                 <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg">
-                  {getQRCodeValue() && (
+                  {qrCodeImage ? (
+                    <>
+                      <img 
+                        src={qrCodeImage} 
+                        alt="QR Code" 
+                        className="mb-4 w-48 h-48 object-contain"
+                      />
+                      <button
+                        onClick={() => {
+                          const link = document.createElement('a')
+                          link.href = qrCodeImage
+                          link.download = 'qrcode.png'
+                          link.click()
+                        }}
+                        className="mb-2 px-3 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors flex items-center gap-1"
+                      >
+                        <Download className="w-3 h-3" />
+                        Download QR Code
+                      </button>
+                    </>
+                  ) : getQRCodeValue() ? (
                     <QRCodeSVG
                       value={getQRCodeValue()}
                       size={200}
                       level="H"
                       includeMargin={true}
                       className="mb-4"
+                      fgColor="#000000"
+                      bgColor="#FFFFFF"
                     />
-                  )}
+                  ) : null}
                   <p className="text-sm text-gray-600 text-center">
                     Scan this QR code to view the contact card
                   </p>
