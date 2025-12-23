@@ -401,6 +401,42 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDeleteRequest = async (id: number, event?: React.MouseEvent) => {
+    // Stop event propagation to prevent opening the modal
+    if (event) {
+      event.stopPropagation()
+    }
+
+    if (!confirm('Are you sure you want to delete this custom order request? This action cannot be undone.')) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const { error } = await supabase
+        .from('custom_requests')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        console.error('Error deleting custom request:', error)
+        alert('Error deleting custom request: ' + error.message)
+      } else {
+        alert('Custom request deleted successfully!')
+        fetchCustomRequests()
+        // Close modal if it's open for the deleted request
+        if (selectedRequest && selectedRequest.id === id) {
+          setSelectedRequest(null)
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Error deleting custom request')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const fetchRecentPayments = useCallback(async () => {
     try {
       setIsRefreshing(true)
@@ -1219,8 +1255,17 @@ export default function AdminDashboard() {
                           <strong>Quantity:</strong> {request.quantity} pieces | <strong>Sizes:</strong> {request.sizes}
                         </p>
                       </div>
-                      <div className="text-right text-xs text-gray-400">
-                        {new Date(request.created_at).toLocaleDateString()}
+                      <div className="flex items-center gap-3">
+                        <div className="text-right text-xs text-gray-400">
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </div>
+                        <button
+                          onClick={(e) => handleDeleteRequest(request.id, e)}
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Delete request"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1236,12 +1281,22 @@ export default function AdminDashboard() {
             <div className="bg-gray-900 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-serif text-gold-light">Request Details</h2>
-                <button
-                  onClick={() => setSelectedRequest(null)}
-                  className="text-gold hover:text-gold-light text-2xl"
-                >
-                  ×
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleDeleteRequest(selectedRequest.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-900/30 text-red-400 hover:bg-red-900/50 hover:text-red-300 rounded-lg transition-colors text-sm"
+                    title="Delete this request"
+                  >
+                    <Trash2 size={18} />
+                    Delete Request
+                  </button>
+                  <button
+                    onClick={() => setSelectedRequest(null)}
+                    className="text-gold hover:text-gold-light text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-4 mb-6">
