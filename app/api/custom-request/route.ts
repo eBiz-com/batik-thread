@@ -13,130 +13,96 @@ function getClientIP(request: NextRequest): string {
   return 'unknown'
 }
 
-// Log submission attempt
-async function logSubmission(data: {
-  ip_address: string
-  user_agent: string | null
-  email: string
-  customer_name: string
-  form_fill_time: number | undefined
-  captcha_passed: false
-  honeypot_triggered: boolean
-  blocked_reason: string | null
-  success: boolean
-  request_id: number | null
-  device_fingerprint: string | undefined
-}) {
-  try {
-    const { data: logData, error } = await supabase.from('submission_logs').insert([{
-      ...data,
-      created_at: new Date().toISOString(),
-    }]).select()
-    
-    if (error) {
-      // Log error but don't throw - we don't want logging failures to break submissions
-      console.error('Error logging submission to database:', error)
-      console.error('Submission data that failed to log:', data)
-      
-      // If table doesn't exist, log a helpful message
-      if (error.message?.includes('relation "submission_logs" does not exist') || 
-          error.code === '42P01') {
-        console.error('⚠️ submission_logs table does not exist! Please run CREATE_SUBMISSION_LOGS_TABLE.sql in Supabase SQL Editor')
-      }
-    } else {
-      console.log('✅ Submission logged successfully:', logData?.[0]?.id)
+// Removed submission_logs - using simple rate limiting instead
+
+// Simple in-memory rate limiting (max 3 requests per IP per hour)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function checkRateLimit(ip: string): { allowed: boolean; reason: string | null } {
+  const now = Date.now()
+  const oneHour = 60 * 60 * 1000
+  
+  const record = rateLimitMap.get(ip)
+  
+  if (record) {
+    // Check if rate limit window has expired
+    if (now > record.resetTime) {
+      // Reset the counter
+      rateLimitMap.set(ip, { count: 1, resetTime: now + oneHour })
+      return { allowed: true, reason: null }
     }
-  } catch (error: any) {
-    console.error('Error logging submission (catch block):', error)
-    console.error('Error details:', {
-      message: error?.message,
-      code: error?.code,
-      details: error?.details,
+    
+    // Check if limit exceeded
+    if (record.count >= 3) {
+      const minutesLeft = Math.ceil((record.resetTime - now) / 60000)
+      return { 
+        allowed: false, 
+        reason: `Too many requests. Please try again in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}.` 
+      }
+    }
+    
+    // Increment counter
+    record.count++
+    rateLimitMap.set(ip, record)
+  } else {
+    // First request from this IP
+    rateLimitMap.set(ip, { count: 1, resetTime: now + oneHour })
+  }
+  
+  // Clean up old entries periodically
+  if (rateLimitMap.size > 1000) {
+    const keysToDelete: string[] = []
+    rateLimitMap.forEach((value, key) => {
+      if (now > value.resetTime) {
+        keysToDelete.push(key)
+      }
     })
+    keysToDelete.forEach(key => rateLimitMap.delete(key))
   }
-}
-
-// Check rate limiting
-async function checkRateLimit(ip: string, email: string): Promise<{ allowed: boolean; reason: string | null }> {
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
   
-  // Check IP-based rate limit (max 3 submissions per hour)
-  const { count: ipCount } = await supabase
-    .from('submission_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('ip_address', ip)
-    .gte('created_at', oneHourAgo)
-  
-  if (ipCount && ipCount >= 3) {
-    return { allowed: false, reason: 'Too many submissions from this IP address. Please try again later.' }
-  }
-
-  // Check email-based rate limit (max 2 submissions per hour)
-  const { count: emailCount } = await supabase
-    .from('submission_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('email', email.toLowerCase())
-    .gte('created_at', oneHourAgo)
-  
-  if (emailCount && emailCount >= 2) {
-    return { allowed: false, reason: 'Too many submissions with this email. Please try again later.' }
-  }
-
-  // Check for blocked IPs (more than 5 failed attempts in last 24 hours)
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const { count: failedCount } = await supabase
-    .from('submission_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('ip_address', ip)
-    .eq('success', false)
-    .gte('created_at', oneDayAgo)
-  
-  if (failedCount && failedCount >= 5) {
-    return { allowed: false, reason: 'This IP address has been temporarily blocked due to suspicious activity.' }
-  }
-
   return { allowed: true, reason: null }
 }
 
-// CAPTCHA verification removed - using confirmation checkbox instead
+// Verify Cloudflare Turnstile token
+async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+  const secretKey = process.env.TURNSTILE_SECRET_KEY
+  
+  if (!secretKey) {
+    console.warn('TURNSTILE_SECRET_KEY not set - using test mode')
+    // In test mode, allow if token exists (for development)
+    return !!(token && token.length > 10)
+  }
 
-// Check for duplicate submissions
-async function checkDuplicateSubmission(email: string, phone: string, eventName: string): Promise<boolean> {
+  if (!token || token.length < 10) {
+    return false
+  }
+
   try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    
-    const { data } = await supabase
-      .from('custom_requests')
-      .select('id')
-      .eq('customer_email', email.toLowerCase())
-      .eq('customer_phone', phone)
-      .eq('event_name', eventName)
-      .gte('created_at', oneHourAgo)
-      .limit(1)
-    
-    return data ? data.length > 0 : false
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        secret: secretKey,
+        response: token,
+        remoteip: ip,
+      }),
+    })
+
+    const data = await response.json()
+    return data.success === true
   } catch (error) {
-    console.error('Error checking duplicate:', error)
-    return false // If check fails, allow submission but log it
+    console.error('Error verifying Turnstile:', error)
+    return false
   }
 }
+
+// Removed duplicate check - rate limiting is sufficient
 
 export async function POST(request: NextRequest) {
   const clientIP = getClientIP(request)
   const userAgent = request.headers.get('user-agent')
-  let submissionData: any = {
-    ip_address: clientIP,
-    user_agent: userAgent,
-    email: '',
-    customer_name: '',
-    form_fill_time: undefined,
-    captcha_passed: false,
-    honeypot_triggered: false,
-    blocked_reason: null,
-    success: false,
-    request_id: null,
-    device_fingerprint: undefined,
-  }
 
   try {
     const body = await request.json()
@@ -151,46 +117,50 @@ export async function POST(request: NextRequest) {
       description,
       style_images,
       form_fill_time,
-      website, // Honeypot field
-      device_fingerprint,
-      confirmed, // Confirmation checkbox
+      company, // Honeypot field
+      turnstile_token,
     } = body
 
-    submissionData.email = customer_email?.toLowerCase() || ''
-    submissionData.customer_name = customer_name || ''
-    submissionData.form_fill_time = form_fill_time
-    submissionData.device_fingerprint = device_fingerprint
-
     // Honeypot check - if filled, it's a bot
-    if (website) {
+    if (company) {
       console.warn('Bot detected: honeypot field was filled', { ip: clientIP, email: customer_email })
-      submissionData.honeypot_triggered = true
-      submissionData.blocked_reason = 'Honeypot field filled'
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'Invalid submission detected' },
         { status: 400 }
       )
     }
 
-    // Rate limiting check
-    if (customer_email) {
-      const rateLimit = await checkRateLimit(clientIP, customer_email)
-      if (!rateLimit.allowed) {
-        submissionData.blocked_reason = rateLimit.reason || 'Rate limit exceeded'
-        await logSubmission(submissionData)
-        return NextResponse.json(
-          { success: false, error: rateLimit.reason },
-          { status: 429 }
-        )
-      }
+    // Rate limiting check (max 3 requests per IP per hour)
+    const rateLimit = checkRateLimit(clientIP)
+    if (!rateLimit.allowed) {
+      console.warn('Rate limit exceeded', { ip: clientIP, email: customer_email })
+      return NextResponse.json(
+        { success: false, error: rateLimit.reason },
+        { status: 429 }
+      )
     }
 
-    // Check minimum form fill time (at least 10 seconds - stricter)
-    if (!form_fill_time || form_fill_time < 10000) {
+    // Verify Turnstile token
+    if (!turnstile_token) {
+      console.warn('Turnstile token missing', { ip: clientIP, email: customer_email })
+      return NextResponse.json(
+        { success: false, error: 'Security verification is required. Please refresh and try again.' },
+        { status: 400 }
+      )
+    }
+
+    const isValidTurnstile = await verifyTurnstile(turnstile_token, clientIP)
+    if (!isValidTurnstile) {
+      console.warn('Turnstile verification failed', { ip: clientIP, email: customer_email })
+      return NextResponse.json(
+        { success: false, error: 'Security verification failed. Please refresh and try again.' },
+        { status: 400 }
+      )
+    }
+
+    // Check minimum form fill time (at least 3 seconds)
+    if (!form_fill_time || form_fill_time < 3000) {
       console.warn('Suspicious: Form submitted too quickly', { form_fill_time, ip: clientIP, email: customer_email })
-      submissionData.blocked_reason = `Form submitted too quickly (${form_fill_time}ms, minimum 10000ms)`
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'Please take more time to fill out the form completely.' },
         { status: 400 }
@@ -213,8 +183,6 @@ export async function POST(request: NextRequest) {
     ]
     if (userAgent && suspiciousUserAgents.some(pattern => pattern.test(userAgent))) {
       console.warn('Suspicious user agent detected:', { userAgent, ip: clientIP, email: customer_email })
-      submissionData.blocked_reason = 'Suspicious user agent detected'
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'Invalid submission detected' },
         { status: 400 }
@@ -222,14 +190,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for missing or suspicious headers
-    const referer = request.headers.get('referer')
     const origin = request.headers.get('origin')
-    const expectedOrigin = process.env.NEXT_PUBLIC_SITE_URL || 'https://batik-thread.vercel.app'
     
     if (origin && !origin.includes('batik-thread') && !origin.includes('localhost')) {
       console.warn('Suspicious origin detected:', { origin, ip: clientIP, email: customer_email })
-      submissionData.blocked_reason = 'Invalid origin header'
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'Invalid submission source' },
         { status: 400 }
@@ -245,107 +209,65 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Block known test/spam emails - STRICT BLOCKING
+    // Block known test/spam emails
     const blockedEmails = [
       'test@test.com',
       'test@example.com',
       'spam@spam.com',
       'admin@test.com',
       'user@test.com',
-      'test@gmail.com',
-      'test@yahoo.com',
-      'test@hotmail.com',
-      'test@outlook.com',
     ]
     
     const emailLower = customer_email.toLowerCase().trim()
     
     // Exact match blocking
     if (blockedEmails.includes(emailLower)) {
-      console.warn('Blocked email detected (exact match):', { email: customer_email, ip: clientIP })
-      submissionData.blocked_reason = `Blocked email address: ${emailLower}`
-      await logSubmission(submissionData)
+      console.warn('Blocked email detected:', { email: customer_email, ip: clientIP })
       return NextResponse.json(
         { success: false, error: 'This email address is not allowed. Please use a valid email address.' },
         { status: 400 }
       )
     }
 
-    // Check for suspicious patterns in email - STRICT
+    // Check for suspicious patterns in email
     const suspiciousPatterns = [
       /^test\d*@/i,           // test, test1, test2, etc.
       /^admin\d*@/i,         // admin, admin1, etc.
       /^user\d*@/i,          // user, user1, etc.
       /@test\./i,             // anything@test.com, anything@test.org, etc.
       /@example\./i,          // anything@example.com
-      /test.*@.*test/i,       // test@test.com, test@testmail.com, etc.
-      /^test@/i,              // test@anything (catches test@test.com and variants)
     ]
     
     if (suspiciousPatterns.some(pattern => pattern.test(emailLower))) {
       console.warn('Suspicious email pattern detected:', { email: customer_email, ip: clientIP })
-      submissionData.blocked_reason = `Suspicious email pattern: ${emailLower}`
-      await logSubmission(submissionData)
-      return NextResponse.json(
-        { success: false, error: 'This email address is not allowed. Please use a valid email address.' },
-        { status: 400 }
-      )
-    }
-    
-    // Additional check: Block if email contains "test" multiple times or in suspicious positions
-    const testCount = (emailLower.match(/test/g) || []).length
-    if (testCount >= 2) {
-      console.warn('Email contains multiple "test" occurrences:', { email: customer_email, ip: clientIP })
-      submissionData.blocked_reason = `Email contains multiple "test" occurrences: ${emailLower}`
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'This email address is not allowed. Please use a valid email address.' },
         { status: 400 }
       )
     }
 
-    // Validate required fields with stricter checks
+    // Validate required fields
     if (!customer_name || !customer_email || !customer_phone || !event_name || !event_date || !quantity || !sizes || !description) {
-      submissionData.blocked_reason = 'Missing required fields'
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'All required fields must be filled' },
         { status: 400 }
       )
     }
 
-    // Check for duplicate submissions (same email, phone, event within 1 hour)
-    const isDuplicate = await checkDuplicateSubmission(customer_email, customer_phone, event_name)
-    if (isDuplicate) {
-      console.warn('Duplicate submission detected:', { email: customer_email, ip: clientIP })
-      submissionData.blocked_reason = 'Duplicate submission detected'
-      await logSubmission(submissionData)
-      return NextResponse.json(
-        { success: false, error: 'A similar request was recently submitted. Please wait before submitting again.' },
-        { status: 400 }
-      )
-    }
-
-    // Validate field lengths to prevent spam
+    // Validate field lengths
     if (customer_name.length < 2 || customer_name.length > 100) {
-      submissionData.blocked_reason = 'Invalid name length'
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'Invalid name format' },
         { status: 400 }
       )
     }
     if (description.length < 10 || description.length > 5000) {
-      submissionData.blocked_reason = 'Invalid description length'
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'Description must be between 10 and 5000 characters' },
         { status: 400 }
       )
     }
     if (parseInt(quantity) < 1 || parseInt(quantity) > 10000) {
-      submissionData.blocked_reason = 'Invalid quantity'
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: 'Quantity must be between 1 and 10,000' },
         { status: 400 }
@@ -364,16 +286,6 @@ export async function POST(request: NextRequest) {
       description: sanitize(description),
     }
 
-    // Require confirmation checkbox
-    if (!confirmed) {
-      console.warn('Confirmation checkbox not checked', { ip: clientIP, email: customer_email })
-      submissionData.blocked_reason = 'Confirmation checkbox not checked'
-      await logSubmission(submissionData)
-      return NextResponse.json(
-        { success: false, error: 'Please confirm that you want to proceed with this request.' },
-        { status: 400 }
-      )
-    }
 
     // Insert into Supabase
     const { data, error } = await supabase
@@ -397,18 +309,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error inserting custom request:', error)
-      submissionData.blocked_reason = 'Database error: ' + error.message
-      await logSubmission(submissionData)
       return NextResponse.json(
         { success: false, error: error.message || 'Failed to submit request' },
         { status: 500 }
       )
     }
-
-    // Log successful submission
-    submissionData.success = true
-    submissionData.request_id = data?.[0]?.id || null
-    await logSubmission(submissionData)
 
     return NextResponse.json({
       success: true,
@@ -417,8 +322,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Error processing custom request:', error)
-    submissionData.blocked_reason = 'Server error: ' + error.message
-    await logSubmission(submissionData).catch(() => {})
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to process request' },
       { status: 500 }

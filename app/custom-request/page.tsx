@@ -4,6 +4,17 @@ import { useState, useRef, useEffect } from 'react'
 import { Upload, Calendar, Users, Ruler, Image as ImageIcon, Loader2, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
+// Extend Window interface for Turnstile
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (element: HTMLElement, options: any) => string
+      execute: (widgetId: string | HTMLElement) => void
+      reset: (widgetId: string | HTMLElement) => void
+    }
+  }
+}
+
 export default function CustomRequestPage() {
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -22,20 +33,43 @@ export default function CustomRequestPage() {
   const [error, setError] = useState('')
   const [formStartTime] = useState(() => Date.now())
   const [honeypot, setHoneypot] = useState('')
-  const [deviceFingerprint, setDeviceFingerprint] = useState<string>('')
-  const [confirmed, setConfirmed] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<HTMLDivElement>(null)
 
-  // Generate device fingerprint on mount
+  // Load Cloudflare Turnstile script and initialize
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const fingerprint = [
-        navigator.userAgent,
-        navigator.language,
-        screen.width + 'x' + screen.height,
-        new Date().getTimezoneOffset(),
-        navigator.platform,
-      ].join('|')
-      setDeviceFingerprint(btoa(fingerprint).substring(0, 32))
+    if (typeof window !== 'undefined' && turnstileRef.current) {
+      // Load Turnstile script
+      const script = document.createElement('script')
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+      script.async = true
+      script.defer = true
+      script.onload = () => {
+        // Initialize Turnstile after script loads
+        if (window.turnstile) {
+          const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA' // Test key
+          window.turnstile.render(turnstileRef.current!, {
+            sitekey: siteKey,
+            size: 'invisible',
+            callback: (token: string) => {
+              setTurnstileToken(token)
+            },
+            'error-callback': () => {
+              setTurnstileToken(null)
+              setError('Security verification failed. Please refresh the page and try again.')
+            },
+          })
+        }
+      }
+      document.head.appendChild(script)
+
+      return () => {
+        // Cleanup
+        const existingScript = document.querySelector('script[src*="turnstile"]')
+        if (existingScript) {
+          existingScript.remove()
+        }
+      }
     }
   }, [])
 
@@ -74,17 +108,28 @@ export default function CustomRequestPage() {
       return
     }
 
-    // Check minimum form fill time (at least 10 seconds - stricter)
+    // Check minimum form fill time (at least 5 seconds)
     const formFillTime = Date.now() - formStartTime
-    if (formFillTime < 10000) {
+    if (formFillTime < 5000) {
       console.warn('Suspicious: Form submitted too quickly', formFillTime)
-      setError(`Please take at least 10 seconds to fill out the form. You've only spent ${Math.round(formFillTime / 1000)} seconds.`)
+      setError(`Please take more time to fill out the form completely.`)
       return
     }
     
-    // Verify confirmation checkbox
-    if (!confirmed) {
-      setError('Please confirm that you want to proceed with this request by checking the confirmation box.')
+    // Execute Turnstile challenge
+    if (typeof window !== 'undefined' && window.turnstile && turnstileRef.current) {
+      try {
+        window.turnstile.execute(turnstileRef.current)
+        // Wait a bit for the token
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      } catch (error) {
+        console.error('Turnstile execution error:', error)
+      }
+    }
+    
+    // Verify Turnstile token
+    if (!turnstileToken) {
+      setError('Security verification is required. Please wait a moment and try again.')
       return
     }
 
@@ -117,8 +162,8 @@ export default function CustomRequestPage() {
           quantity: parseInt(formData.quantity),
           style_images: imageUrls,
           form_fill_time: Date.now() - formStartTime,
-          device_fingerprint: deviceFingerprint,
-          confirmed: confirmed,
+          turnstile_token: turnstileToken,
+          company: honeypot, // Honeypot field
         }),
       })
 
@@ -139,14 +184,21 @@ export default function CustomRequestPage() {
         })
         setImages([])
         setImagePreviews([])
-        setConfirmed(false)
+        setTurnstileToken(null)
+        // Reset Turnstile
+        if (typeof window !== 'undefined' && window.turnstile && turnstileRef.current) {
+          window.turnstile.reset(turnstileRef.current)
+        }
       } else {
         throw new Error(data.error || 'Failed to submit request')
       }
     } catch (err: any) {
       setError(err.message || 'Failed to submit request. Please try again.')
-      // Reset confirmation on error
-      setConfirmed(false)
+      // Reset Turnstile on error
+      setTurnstileToken(null)
+      if (typeof window !== 'undefined' && window.turnstile && turnstileRef.current) {
+        window.turnstile.reset(turnstileRef.current)
+      }
     } finally {
       setLoading(false)
     }
@@ -182,16 +234,6 @@ export default function CustomRequestPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-            {/* Honeypot field - hidden from users but visible to bots */}
-            <input
-              type="text"
-              name="website"
-              value={honeypot}
-              onChange={(e) => setHoneypot(e.target.value)}
-              style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}
-              tabIndex={-1}
-              autoComplete="off"
-            />
 
             {/* Customer Information */}
             <div className="space-y-4">
@@ -396,29 +438,19 @@ export default function CustomRequestPage() {
               )}
             </div>
 
-            {/* Confirmation Checkbox */}
-            <div className="space-y-4">
-              <div className="bg-gray-800 p-4 rounded-lg border border-gold/30">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={confirmed}
-                    onChange={(e) => setConfirmed(e.target.checked)}
-                    className="mt-1 w-5 h-5 rounded border-gold/50 bg-gray-700 text-gold focus:ring-gold focus:ring-2 cursor-pointer"
-                    required
-                  />
-                  <div className="flex-1">
-                    <p className="text-gold font-semibold mb-1">Confirm Your Request</p>
-                    <p className="text-gray-300 text-sm">
-                      I confirm that I want to proceed with this custom order request. I understand that this is a legitimate request and I will be contacted regarding my order.
-                    </p>
-                  </div>
-                </label>
-              </div>
-              <p className="text-xs text-gray-500 text-center">
-                By checking this box, you confirm that you are submitting a legitimate custom order request.
-              </p>
-            </div>
+            {/* Cloudflare Turnstile (Invisible) */}
+            <div ref={turnstileRef} className="hidden"></div>
+            
+            {/* Honeypot field - hidden from users */}
+            <input
+              type="text"
+              name="company"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}
+              tabIndex={-1}
+              autoComplete="off"
+            />
 
             {error && (
               <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-lg">
@@ -435,7 +467,7 @@ export default function CustomRequestPage() {
               </Link>
               <button
                 type="submit"
-                disabled={loading || !confirmed}
+                disabled={loading || !turnstileToken}
                 className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
