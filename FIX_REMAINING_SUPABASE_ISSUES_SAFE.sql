@@ -266,18 +266,12 @@ END $$;
 
 -- ============================================
 -- 7. VACUUM AND ANALYZE FOR PERFORMANCE
--- ============================================
-
-VACUUM ANALYZE public.products;
-VACUUM ANALYZE public.custom_requests;
-VACUUM ANALYZE public.receipts;
-VACUUM ANALYZE public.transactions;
-VACUUM ANALYZE public.contact_card_settings;
-
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'submission_logs') THEN
-    VACUUM ANALYZE public.submission_logs;
-  END IF;
-END $$;
+-- Note: VACUUM cannot run in transaction blocks
+-- Run these separately if needed:
+-- VACUUM ANALYZE public.products;
+-- VACUUM ANALYZE public.custom_requests;
+-- VACUUM ANALYZE public.receipts;
+-- VACUUM ANALYZE public.transactions;
+-- VACUUM ANALYZE public.contact_card_settings;
+-- VACUUM ANALYZE public.submission_logs;
 
