@@ -27,7 +27,9 @@ END $$;
 
 DROP VIEW IF EXISTS public.blocked_submissions CASCADE;
 
-CREATE VIEW public.blocked_submissions AS
+-- Recreate view explicitly as SECURITY INVOKER (not SECURITY DEFINER)
+CREATE VIEW public.blocked_submissions
+WITH (security_invoker=true) AS
 SELECT 
   ip_address,
   email,
