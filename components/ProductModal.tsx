@@ -147,7 +147,7 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
 
         <div className="grid md:grid-cols-2 gap-6 p-6">
           {/* Image Carousel */}
-          <div className="relative w-full min-h-[400px] md:min-h-[500px] rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
+          <div className="relative w-full aspect-[4/5] min-h-[400px] md:min-h-[500px] max-h-[600px] rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
             {product.images.length > 0 && (
               <Image
                 src={product.images[currentImageIndex]}
