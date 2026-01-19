@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
           }
 
           if (productData) {
-            const size = item.size || 'M' // Default to M if no size specified
+            const size: string = (item.size || 'M') as string // Default to M if no size specified
             const quantity = item.quantity || 1
 
             // Update stock_by_size if it exists
