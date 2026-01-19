@@ -65,12 +65,15 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
       }
 
       if (data.url) {
-        // Store items in sessionStorage for receipt generation
+        // Store items in sessionStorage for receipt generation AND stock reduction
+        // Include full product data with id and size for stock management
         sessionStorage.setItem('checkout_items', JSON.stringify(cart.map(item => ({
+          id: item.product.id, // CRITICAL: Needed for stock reduction
           name: item.product.name,
           description: `${item.product.name} (Size: ${item.size})`,
           price: item.product.price,
           quantity: item.quantity,
+          size: item.size, // CRITICAL: Needed for stock reduction
         }))))
         
         // Redirect to demo payment page

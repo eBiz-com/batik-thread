@@ -132,9 +132,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Reduce stock for purchased items
+    console.log('Starting stock reduction for items:', JSON.stringify(items, null, 2))
     try {
       for (const item of items || []) {
-        if (item.id && (item.quantity || 1) > 0) {
+        console.log(`Processing stock reduction for item:`, { id: item.id, name: item.name, size: item.size, quantity: item.quantity })
+        
+        if (!item.id) {
+          console.warn(`Skipping item - missing id:`, item)
+          continue
+        }
+        
+        if ((item.quantity || 1) > 0) {
           // Get current product data
           const { data: productData, error: productError } = await supabase
             .from('products')
