@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
               const currentSizeStock = currentStockBySize[size] || 0
               
               if (currentSizeStock >= quantity) {
-                const updatedStockBySize = {
+                const updatedStockBySize: { [key: string]: number } = {
                   ...currentStockBySize,
                   [size]: Math.max(0, currentSizeStock - quantity)
                 }
