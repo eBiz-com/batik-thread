@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Calculate total stock from all sizes
-                const totalStock = Object.values(updatedStockBySize).reduce((sum, val) => sum + val, 0)
+                const totalStock = Object.values(updatedStockBySize).reduce((sum: number, val: number) => sum + val, 0)
 
                 // Update product with new stock
                 const { error: updateError } = await supabase
