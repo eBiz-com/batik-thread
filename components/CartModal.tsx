@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Loader2, Plus, Minus } from 'lucide-react'
+import Image from 'next/image'
 import { CartItem } from '@/lib/supabase'
 import { getSettings, calculateOrderTotal } from '@/lib/settings'
 
@@ -104,18 +105,38 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
                       key={index}
                       className="p-4 bg-gray-800 rounded-lg space-y-3"
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-gold font-semibold">{item.product.name}</h3>
-                          <p className="text-gray-300 text-sm">Size: {item.size}</p>
-                          <p className="text-gray-400 text-sm">${item.product.price} each</p>
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        <div className="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-700">
+                          {item.product.images && item.product.images.length > 0 ? (
+                            <Image
+                              src={item.product.images[0]}
+                              alt={item.product.name}
+                              fill
+                              className="object-contain"
+                              sizes="96px"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                              No Image
+                            </div>
+                          )}
                         </div>
-                        <button
-                          onClick={() => onRemove(index)}
-                          className="text-red-400 hover:text-red-300 text-xl font-bold ml-4"
-                        >
-                          ×
-                        </button>
+                        
+                        {/* Product Info */}
+                        <div className="flex-1 flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="text-gold font-semibold">{item.product.name}</h3>
+                            <p className="text-gray-300 text-sm">Size: {item.size}</p>
+                            <p className="text-gray-400 text-sm">${item.product.price} each</p>
+                          </div>
+                          <button
+                            onClick={() => onRemove(index)}
+                            className="text-red-400 hover:text-red-300 text-xl font-bold ml-4"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
                       
                       <div className="flex items-center justify-between">

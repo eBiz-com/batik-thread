@@ -136,25 +136,26 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-gray-900 rounded-xl max-w-5xl w-full my-8 relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gold hover:text-gold-light z-10"
+          className="absolute top-4 right-4 text-gold hover:text-gold-light z-10 bg-gray-900/80 rounded-full p-2"
         >
           <X size={24} />
         </button>
 
         <div className="grid md:grid-cols-2 gap-6 p-6">
           {/* Image Carousel */}
-          <div className="relative w-full h-96 rounded-lg overflow-hidden">
+          <div className="relative w-full min-h-[400px] md:min-h-[500px] rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
             {product.images.length > 0 && (
               <Image
                 src={product.images[currentImageIndex]}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
+                priority
               />
             )}
             {product.images.length > 1 && (
@@ -173,7 +174,7 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
           </div>
 
           {/* Product Info */}
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-2rem)] md:max-h-none">
             <h2 className="text-3xl font-serif text-gold-light">{product.name}</h2>
             <p className="text-2xl font-bold text-gold">${product.price}</p>
             <p className="text-gray-300">{product.story}</p>

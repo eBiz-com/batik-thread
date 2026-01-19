@@ -25,13 +25,13 @@ export default function ProductGrid({ products, onProductClick }: ProductGridPro
           className="bg-gray-900 rounded-xl overflow-hidden shadow-lg hover:scale-105 hover:shadow-gold/30 transition-all cursor-pointer group"
           onClick={() => onProductClick(product)}
         >
-          <div className="relative w-full h-64 overflow-hidden">
+          <div className="relative w-full h-64 overflow-hidden bg-gray-800">
             {product.images && product.images.length > 0 ? (
               <Image
                 src={product.images[0]}
                 alt={product.name}
                 fill
-                className="object-cover group-hover:scale-110 transition-transform duration-300"
+                className="object-contain group-hover:scale-105 transition-transform duration-300"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
             ) : (
