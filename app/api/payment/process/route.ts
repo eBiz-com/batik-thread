@@ -131,6 +131,85 @@ export async function POST(request: NextRequest) {
       console.error('Transaction save failed, but continuing with payment:', transactionErr.message)
     }
 
+    // Reduce stock for purchased items
+    try {
+      for (const item of items || []) {
+        if (item.id && (item.quantity || 1) > 0) {
+          // Get current product data
+          const { data: productData, error: productError } = await supabase
+            .from('products')
+            .select('stock, stock_by_size')
+            .eq('id', item.id)
+            .single()
+
+          if (productError) {
+            console.error(`Error fetching product ${item.id}:`, productError)
+            continue
+          }
+
+          if (productData) {
+            const size = item.size || 'M' // Default to M if no size specified
+            const quantity = item.quantity || 1
+
+            // Update stock_by_size if it exists
+            if (productData.stock_by_size && typeof productData.stock_by_size === 'object') {
+              const currentStockBySize = productData.stock_by_size as { [key: string]: number }
+              const currentSizeStock = currentStockBySize[size] || 0
+              
+              if (currentSizeStock >= quantity) {
+                const updatedStockBySize = {
+                  ...currentStockBySize,
+                  [size]: Math.max(0, currentSizeStock - quantity)
+                }
+
+                // Calculate total stock from all sizes
+                const totalStock = Object.values(updatedStockBySize).reduce((sum, val) => sum + val, 0)
+
+                // Update product with new stock
+                const { error: updateError } = await supabase
+                  .from('products')
+                  .update({
+                    stock_by_size: updatedStockBySize,
+                    stock: totalStock
+                  })
+                  .eq('id', item.id)
+
+                if (updateError) {
+                  console.error(`Error updating stock for product ${item.id}:`, updateError)
+                } else {
+                  console.log(`Stock updated for product ${item.id}, size ${size}: ${currentSizeStock} -> ${updatedStockBySize[size]}`)
+                }
+              } else {
+                console.warn(`Insufficient stock for product ${item.id}, size ${size}. Requested: ${quantity}, Available: ${currentSizeStock}`)
+              }
+            } else if (productData.stock !== null && productData.stock !== undefined) {
+              // Legacy: Update total stock
+              const currentStock = productData.stock || 0
+              if (currentStock >= quantity) {
+                const { error: updateError } = await supabase
+                  .from('products')
+                  .update({
+                    stock: Math.max(0, currentStock - quantity)
+                  })
+                  .eq('id', item.id)
+
+                if (updateError) {
+                  console.error(`Error updating stock for product ${item.id}:`, updateError)
+                } else {
+                  console.log(`Stock updated for product ${item.id}: ${currentStock} -> ${currentStock - quantity}`)
+                }
+              } else {
+                console.warn(`Insufficient stock for product ${item.id}. Requested: ${quantity}, Available: ${currentStock}`)
+              }
+            }
+          }
+        }
+      }
+    } catch (stockErr: any) {
+      console.error('Error reducing stock:', stockErr)
+      // Don't fail payment if stock update fails, but log it
+    }
+
     // Log payment details (in production, this would be stored securely)
     console.log('Demo Payment Processed:', {
       paymentId,

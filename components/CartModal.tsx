@@ -51,6 +51,19 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
 
       const data = await response.json()
 
+      if (!response.ok || data.error) {
+        if (data.outOfStock && data.redirectTo) {
+          const redirect = confirm(`${data.error}\n\nWould you like to place a custom order instead?`)
+          if (redirect) {
+            window.location.href = data.redirectTo
+          }
+        } else {
+          alert(data.error || 'Failed to initiate checkout')
+        }
+        setLoading(false)
+        return
+      }
+
       if (data.url) {
         // Store items in sessionStorage for receipt generation
         sessionStorage.setItem('checkout_items', JSON.stringify(cart.map(item => ({

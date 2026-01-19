@@ -50,7 +50,17 @@ export default function Home() {
       }
 
       if (data && data.length > 0) {
-        setProducts(data)
+        // Filter out products with no stock (only show products with stock > 0)
+        const availableProducts = data.filter((product: Product) => {
+          // Check stock_by_size first
+          if (product.stock_by_size && typeof product.stock_by_size === 'object') {
+            const totalStock = Object.values(product.stock_by_size).reduce((sum, val) => sum + (val || 0), 0)
+            return totalStock > 0
+          }
+          // Fallback to legacy stock field
+          return (product.stock || 0) > 0
+        })
+        setProducts(availableProducts)
       } else {
         // Use demo products if no data in Supabase
         setProducts(getDemoProducts())

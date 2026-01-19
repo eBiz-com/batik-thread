@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
 
 // ============================================
 // DEMO PAYMENT API - Simulates payment processing
@@ -11,6 +12,51 @@ export async function POST(request: NextRequest) {
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 })
+    }
+
+    // Validate stock availability before checkout
+    for (const item of items) {
+      if (item.id) {
+        const { data: product, error } = await supabase
+          .from('products')
+          .select('stock, stock_by_size')
+          .eq('id', item.id)
+          .single()
+
+        if (error || !product) {
+          return NextResponse.json(
+            { error: `Product ${item.name || item.id} not found` },
+            { status: 400 }
+          )
+        }
+
+        const size = item.size || 'M'
+        const quantity = item.quantity || 1
+
+        // Check stock_by_size first
+        if (product.stock_by_size && typeof product.stock_by_size === 'object') {
+          const sizeStock = (product.stock_by_size as { [key: string]: number })[size] || 0
+          if (sizeStock < quantity) {
+            return NextResponse.json(
+              { 
+                error: `Insufficient stock for ${item.name || 'item'}. Only ${sizeStock} available in size ${size}.`,
+                outOfStock: true,
+                redirectTo: '/custom-request'
+              },
+              { status: 400 }
+            )
+          }
+        } else if ((product.stock || 0) < quantity) {
+          return NextResponse.json(
+            { 
+              error: `Insufficient stock for ${item.name || 'item'}. Only ${product.stock || 0} available.`,
+              outOfStock: true,
+              redirectTo: '/custom-request'
+            },
+            { status: 400 }
+          )
+        }
+      }
     }
 
     // Generate a demo session ID

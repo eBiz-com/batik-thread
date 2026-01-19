@@ -76,6 +76,13 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
   }, [product.images.length])
 
   const handleAddToCart = () => {
+    if (currentStock === 0) {
+      const redirect = confirm('This item is out of stock. Would you like to place a custom order instead?')
+      if (redirect) {
+        window.location.href = '/custom-request'
+      }
+      return
+    }
     if (quantity > currentStock) {
       alert(`Only ${currentStock} available in size ${selectedSize}`)
       return
@@ -92,6 +99,13 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
   }
 
   const handleBuyNow = async () => {
+    if (currentStock === 0) {
+      const redirect = confirm('This item is out of stock. Would you like to place a custom order instead?')
+      if (redirect) {
+        window.location.href = '/custom-request'
+      }
+      return
+    }
     if (quantity > currentStock) {
       alert(`Only ${currentStock} available in size ${selectedSize}`)
       return
@@ -249,20 +263,31 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
             </div>
 
             <div className="flex gap-4 pt-4">
-              <button
-                onClick={handleAddToCart}
-                disabled={currentStock === 0 || quantity > currentStock}
-                className="flex-1 px-6 py-3 border border-gold text-gold rounded-full hover:bg-gold hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add to Cart
-              </button>
-              <button
-                onClick={handleBuyNow}
-                disabled={currentStock === 0 || quantity > currentStock}
-                className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Buy Now
-              </button>
+              {currentStock === 0 ? (
+                <button
+                  onClick={() => window.location.href = '/custom-request'}
+                  className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all font-semibold"
+                >
+                  Order Custom (Out of Stock)
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={quantity > currentStock}
+                    className="flex-1 px-6 py-3 border border-gold text-gold rounded-full hover:bg-gold hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add to Cart
+                  </button>
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={quantity > currentStock}
+                    className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Buy Now
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
