@@ -1,6 +1,9 @@
 # Email Setup Guide
 
-This guide explains how to set up email sending for receipt emails. You can use Demo Mode (no setup required) or configure Gmail SMTP for actual email sending.
+This guide explains how to set up email sending for receipt emails. You can use:
+- **Mailgun** (Recommended for production - best deliverability)
+- **Gmail SMTP** (Simple setup, good for testing)
+- **Demo Mode** (No setup required - simulates email sending)
 
 ## Quick Start - Demo Mode (No Setup Required)
 
@@ -11,9 +14,47 @@ To use Demo Mode:
 - Emails will be logged to the console
 - Perfect for testing and development
 
-## Gmail SMTP Configuration (For Actual Email Sending)
+## Mailgun Configuration (Recommended for Production)
 
-If you want to send actual emails, you can configure Gmail SMTP.
+Mailgun is the recommended email service for production use. It offers better deliverability, higher sending limits, and better analytics than Gmail SMTP.
+
+### Step 1: Get Mailgun Account
+
+1. Sign up for a free account at https://www.mailgun.com
+2. Verify your account (free tier includes 5,000 emails/month for 3 months, then 1,000/month)
+3. Go to **Sending** → **Domain Settings** in your Mailgun dashboard
+4. You can use the sandbox domain for testing, or add your own domain for production
+
+### Step 2: Get Mailgun Credentials
+
+1. In Mailgun dashboard, go to **Sending** → **Domain Settings**
+2. Find your domain (or use the sandbox domain)
+3. Copy your **API Key** (starts with `key-` or similar)
+4. Copy your **Domain** (e.g., `sandbox1234.mailgun.org` or your custom domain)
+
+### Step 3: Set Environment Variables
+
+Add the following to your `.env.local` file:
+
+```env
+# Mailgun Configuration (Recommended)
+MAILGUN_API_KEY=your_mailgun_api_key_here
+MAILGUN_DOMAIN=your_mailgun_domain_here
+MAILGUN_FROM_EMAIL=postmaster@your_mailgun_domain_here
+
+# Or use sandbox for testing:
+# MAILGUN_DOMAIN=sandbox1234.mailgun.org
+# MAILGUN_FROM_EMAIL=postmaster@sandbox1234.mailgun.org
+```
+
+**Priority Order:**
+- If `MAILGUN_API_KEY` and `MAILGUN_DOMAIN` are set → Uses Mailgun
+- Else if `GMAIL_PASS` is set → Uses Gmail SMTP
+- Else → Uses Demo Mode
+
+## Gmail SMTP Configuration (Alternative)
+
+If you prefer to use Gmail SMTP instead of Mailgun:
 
 ### Step 1: Get Gmail App Password
 
@@ -33,7 +74,12 @@ Add the following to your `.env.local` file:
 # For Demo Mode (default - no setup needed)
 EMAIL_DEMO_MODE=true
 
-# For Gmail SMTP (actual email sending)
+# For Mailgun (Recommended - set these first)
+MAILGUN_API_KEY=your_mailgun_api_key
+MAILGUN_DOMAIN=your_mailgun_domain
+MAILGUN_FROM_EMAIL=postmaster@your_domain
+
+# For Gmail SMTP (Alternative - only used if Mailgun not configured)
 GMAIL_USER=ddicservicellc@gmail.com
 GMAIL_PASS=your_16_character_app_password_here
 ```

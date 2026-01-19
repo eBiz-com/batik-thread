@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer'
 
 // ============================================
 // EMAIL RECEIPT API
-// Sends receipt via email using Gmail SMTP or Demo Mode
+// Sends receipt via email using Mailgun (preferred), Gmail SMTP, or Demo Mode
 // ============================================
 
 export async function POST(request: NextRequest) {
@@ -26,10 +26,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if demo mode is enabled or if Gmail credentials are missing
-    const DEMO_MODE = process.env.EMAIL_DEMO_MODE === 'true' || !process.env.GMAIL_PASS
+    // Email service configuration (priority: Mailgun > Gmail > Demo Mode)
+    const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || ''
+    const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || ''
+    const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || `postmaster@${MAILGUN_DOMAIN}`
+    
     const GMAIL_USER = process.env.GMAIL_USER || 'ddicservicellc@gmail.com'
     const GMAIL_PASS = process.env.GMAIL_PASS || ''
+    
+    // Determine which service to use
+    const USE_MAILGUN = MAILGUN_API_KEY && MAILGUN_DOMAIN
+    const USE_GMAIL = !USE_MAILGUN && GMAIL_PASS
+    const DEMO_MODE = process.env.EMAIL_DEMO_MODE === 'true' || (!USE_MAILGUN && !USE_GMAIL)
 
     // Generate HTML email content with watermark (used in both demo and production)
     const itemsHtml = receiptData.items.map((item: any) => `
@@ -220,18 +228,42 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Production Mode - Send actual email via Gmail SMTP
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_PASS,
-      },
-    })
+    // Production Mode - Send actual email via Mailgun or Gmail SMTP
+    let transporter
+    let fromEmail
+
+    if (USE_MAILGUN) {
+      // Use Mailgun (preferred - better deliverability and reliability)
+      transporter = nodemailer.createTransport({
+        host: 'smtp.mailgun.org',
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: 'api',
+          pass: MAILGUN_API_KEY,
+        },
+      })
+      fromEmail = MAILGUN_FROM_EMAIL
+      console.log('Using Mailgun for email delivery')
+    } else if (USE_GMAIL) {
+      // Fallback to Gmail SMTP
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: GMAIL_USER,
+          pass: GMAIL_PASS,
+        },
+      })
+      fromEmail = GMAIL_USER
+      console.log('Using Gmail SMTP for email delivery')
+    } else {
+      // This shouldn't happen due to DEMO_MODE check, but just in case
+      throw new Error('No email service configured')
+    }
 
     // Send email
     const mailOptions = {
-      from: `"Batik & Thread" <${GMAIL_USER}>`,
+      from: `"Batik & Thread" <${fromEmail}>`,
       to: email,
       subject: subject,
       html: emailHtml,
