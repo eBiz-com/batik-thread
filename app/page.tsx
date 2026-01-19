@@ -54,7 +54,8 @@ export default function Home() {
         const availableProducts = data.filter((product: Product) => {
           // Check stock_by_size first
           if (product.stock_by_size && typeof product.stock_by_size === 'object') {
-            const totalStock = Object.values(product.stock_by_size).reduce((sum, val) => sum + (val || 0), 0)
+            const stockValues: number[] = Object.values(product.stock_by_size) as number[]
+            const totalStock: number = stockValues.reduce((sum: number, val: number) => sum + (val || 0), 0)
             return totalStock > 0
           }
           // Fallback to legacy stock field
@@ -203,7 +204,7 @@ export default function Home() {
   }
 
   const getTotalPrice = () => {
-    return cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+    return cart.reduce((sum: number, item) => sum + (item.product.price * item.quantity), 0)
   }
 
   const getOrderBreakdown = () => {
@@ -255,7 +256,7 @@ export default function Home() {
             <ShoppingCart size={24} />
             {cart.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-gold text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                {cart.reduce((sum: number, item) => sum + item.quantity, 0)}
               </span>
             )}
           </button>

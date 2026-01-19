@@ -297,7 +297,8 @@ export default function AdminDashboard() {
       if (Object.keys(stockBySize).length > 0) {
         productData.stock_by_size = stockBySize
         // Calculate total stock for backward compatibility
-        productData.stock = Object.values(stockBySize).reduce((sum, val) => sum + val, 0)
+        const stockValues: number[] = Object.values(stockBySize) as number[]
+        productData.stock = stockValues.reduce((sum: number, val: number) => sum + val, 0)
       } else if (formData.stock) {
         productData.stock = parseInt(formData.stock)
       }
