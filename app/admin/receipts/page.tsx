@@ -177,7 +177,7 @@ export default function ReceiptsHistoryPage() {
     }
   }
 
-  const totalRevenue = filteredReceipts.reduce((sum, r) => sum + r.grand_total, 0)
+  const totalRevenue = filteredReceipts.reduce((sum: number, r) => sum + r.grand_total, 0)
   const totalReceipts = filteredReceipts.length
 
   return (

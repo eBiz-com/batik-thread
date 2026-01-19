@@ -69,7 +69,7 @@ export default function ReceiptPage() {
   }
 
   const calculateTotals = () => {
-    const calculatedSubtotal = items.reduce((sum, item) => sum + (item.total || 0), 0)
+    const calculatedSubtotal = items.reduce((sum: number, item) => sum + (item.total || 0), 0)
     setSubtotal(calculatedSubtotal)
 
     const calculatedTax = calculatedSubtotal * (taxPercent / 100)

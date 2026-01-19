@@ -134,11 +134,11 @@ export default function TransactionsPage() {
   // Calculate statistics
   const totalRevenue = filteredTransactions
     .filter(t => t.payment_status === 'completed' || t.payment_status === 'transaction_closed')
-    .reduce((sum, t) => sum + t.total_amount, 0)
+    .reduce((sum: number, t) => sum + t.total_amount, 0)
 
   const totalRefunds = filteredTransactions
     .filter(t => t.payment_status === 'refunded')
-    .reduce((sum, t) => sum + (t.refund_amount || t.total_amount), 0)
+    .reduce((sum: number, t) => sum + (t.refund_amount || t.total_amount), 0)
 
   const netIncome = totalRevenue - totalRefunds
 
