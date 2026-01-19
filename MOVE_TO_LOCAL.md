@@ -1,4 +1,4 @@
-# Move Project Out of OneDrive - Step by Step
+to deploy # Move Project Out of OneDrive - Step by Step
 
 ## Why This is Needed
 OneDrive can cause serious issues with Next.js development:
