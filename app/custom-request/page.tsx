@@ -57,6 +57,7 @@ export default function CustomRequestPage() {
               console.log('Turnstile token received')
               turnstileTokenRef.current = token
               setTurnstileToken(token)
+              // DO NOT auto-submit - user must click submit button
             },
             'error-callback': () => {
               console.error('Turnstile error callback')
@@ -122,8 +123,15 @@ export default function CustomRequestPage() {
       return
     }
     
-    // Execute Turnstile challenge and wait for token
-    if (typeof window !== 'undefined' && window.turnstile && (turnstileRef.current || turnstileWidgetIdRef.current)) {
+    // Check if Turnstile is available
+    if (typeof window === 'undefined' || !window.turnstile) {
+      setError('Security verification is not available. Please refresh the page and try again.')
+      return
+    }
+
+    // Check if we already have a valid token
+    if (!turnstileTokenRef.current && !turnstileToken) {
+      // Execute Turnstile challenge and wait for token
       try {
         // Reset token first
         turnstileTokenRef.current = null
@@ -131,9 +139,13 @@ export default function CustomRequestPage() {
         
         // Execute Turnstile challenge
         const widgetId = turnstileWidgetIdRef.current || turnstileRef.current
-        if (widgetId) {
-          window.turnstile.execute(widgetId)
+        if (!widgetId) {
+          setError('Security verification widget not found. Please refresh the page and try again.')
+          return
         }
+        
+        console.log('Executing Turnstile challenge...')
+        window.turnstile.execute(widgetId)
         
         // Wait for token with timeout (max 5 seconds)
         let attempts = 0
@@ -145,24 +157,25 @@ export default function CustomRequestPage() {
         
         // Check if we got a token
         if (!turnstileTokenRef.current) {
+          console.error('Turnstile token not received after 5 seconds')
           setError('Security verification is taking too long. Please refresh the page and try again.')
           return
         }
         
         // Update state with the token from ref
         setTurnstileToken(turnstileTokenRef.current)
+        console.log('Turnstile token ready for submission')
       } catch (error) {
         console.error('Turnstile execution error:', error)
         setError('Security verification failed. Please refresh the page and try again.')
         return
       }
-    } else {
-      setError('Security verification is not available. Please refresh the page and try again.')
-      return
     }
     
     // Final verification - REQUIRED for submission
-    if (!turnstileTokenRef.current) {
+    const finalToken = turnstileTokenRef.current || turnstileToken
+    if (!finalToken) {
+      console.error('No Turnstile token available for submission')
       setError('Security verification is required. Please refresh the page and try again.')
       return
     }
@@ -196,7 +209,7 @@ export default function CustomRequestPage() {
           quantity: parseInt(formData.quantity),
           style_images: imageUrls,
           form_fill_time: Date.now() - formStartTime,
-          turnstile_token: turnstileToken,
+          turnstile_token: turnstileTokenRef.current || turnstileToken,
           company: honeypot, // Honeypot field
         }),
       })

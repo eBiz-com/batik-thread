@@ -474,15 +474,22 @@ export default function AdminDashboard() {
       }
 
       // Use admin API route (bypasses RLS using service role key)
+      console.log('Calling delete API:', `/api/admin/delete-custom-request?id=${requestId}`)
       const response = await fetch(`/api/admin/delete-custom-request?id=${requestId}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
 
+      console.log('Delete API response status:', response.status)
       const result = await response.json()
+      console.log('Delete API response:', result)
 
       if (!response.ok || !result.success) {
-        console.error('Error deleting custom request:', result.error)
-        alert(`Error deleting custom request: ${result.error || 'Unknown error'}\n\nCheck browser console (F12) for more details.`)
+        console.error('Error deleting custom request:', result)
+        const errorMsg = result.error || 'Unknown error'
+        alert(`Error deleting custom request: ${errorMsg}\n\nStatus: ${response.status}\n\nCheck browser console (F12) for more details.`)
       } else {
         console.log('Custom request deleted successfully:', result.deleted)
         alert('Custom request deleted successfully!')

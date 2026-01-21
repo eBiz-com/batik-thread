@@ -19,9 +19,21 @@ export async function DELETE(request: NextRequest) {
   try {
     // Check if service role key is configured
     if (!supabaseAdmin) {
-      console.error('SUPABASE_SERVICE_ROLE_KEY not configured')
+      const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      console.error('SUPABASE_SERVICE_ROLE_KEY not configured', {
+        hasKey,
+        keyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+        keyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) || 'none'
+      })
       return NextResponse.json(
-        { success: false, error: 'Admin operations not configured. Please set SUPABASE_SERVICE_ROLE_KEY environment variable.' },
+        { 
+          success: false, 
+          error: 'Admin operations not configured. Please set SUPABASE_SERVICE_ROLE_KEY environment variable in Vercel.',
+          debug: {
+            hasKey,
+            keyConfigured: hasKey
+          }
+        },
         { status: 500 }
       )
     }
