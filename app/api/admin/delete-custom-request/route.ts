@@ -20,18 +20,35 @@ export async function DELETE(request: NextRequest) {
     // Check if service role key is configured
     if (!supabaseAdmin) {
       const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      const keyLength = process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0
+      const keyPrefix = process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) || 'none'
+      
       console.error('SUPABASE_SERVICE_ROLE_KEY not configured', {
         hasKey,
-        keyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
-        keyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) || 'none'
+        keyLength,
+        keyPrefix,
+        allEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('SERVICE'))
       })
+      
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Admin operations not configured. Please set SUPABASE_SERVICE_ROLE_KEY environment variable in Vercel.',
+          error: `Admin operations not configured. Please set SUPABASE_SERVICE_ROLE_KEY environment variable in Vercel and redeploy.
+
+Current status:
+- Key exists: ${hasKey}
+- Key length: ${keyLength}
+- Key prefix: ${keyPrefix}
+
+Steps to fix:
+1. Go to Vercel → Settings → Environment Variables
+2. Add: SUPABASE_SERVICE_ROLE_KEY = (your service role key from Supabase)
+3. Make sure it's set for ALL environments
+4. Redeploy (turn OFF build cache)`,
           debug: {
             hasKey,
-            keyConfigured: hasKey
+            keyLength,
+            keyPrefix
           }
         },
         { status: 500 }
