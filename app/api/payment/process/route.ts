@@ -133,12 +133,28 @@ export async function POST(request: NextRequest) {
 
     // Reduce stock for purchased items
     console.log('Starting stock reduction for items:', JSON.stringify(items, null, 2))
+    console.log('Items count:', items?.length || 0)
+    
+    if (!items || items.length === 0) {
+      console.warn('⚠️ WARNING: No items provided for stock reduction!')
+      console.warn('This means stock will NOT be reduced. Check if items are being passed correctly from payment page.')
+    }
+    
     try {
       for (const item of items || []) {
-        console.log(`Processing stock reduction for item:`, { id: item.id, name: item.name, size: item.size, quantity: item.quantity })
+        console.log(`Processing stock reduction for item:`, { 
+          id: item.id, 
+          name: item.name, 
+          size: item.size, 
+          quantity: item.quantity,
+          hasId: !!item.id,
+          hasSize: !!item.size,
+          hasQuantity: !!item.quantity
+        })
         
         if (!item.id) {
-          console.warn(`Skipping item - missing id:`, item)
+          console.error(`❌ ERROR: Skipping item - missing id!`, item)
+          console.error('Item structure:', JSON.stringify(item, null, 2))
           continue
         }
         
@@ -203,9 +219,10 @@ export async function POST(request: NextRequest) {
                   .eq('id', item.id)
 
                 if (updateError) {
-                  console.error(`Error updating stock for product ${item.id}:`, updateError)
+                  console.error(`❌ ERROR updating stock for product ${item.id}:`, updateError)
+                  console.error('Update error details:', JSON.stringify(updateError, null, 2))
                 } else {
-                  console.log(`Stock updated for product ${item.id}: ${currentStock} -> ${currentStock - quantity}`)
+                  console.log(`✅ Stock updated successfully for product ${item.id}: ${currentStock} -> ${currentStock - quantity}`)
                 }
               } else {
                 console.warn(`Insufficient stock for product ${item.id}. Requested: ${quantity}, Available: ${currentStock}`)

@@ -172,13 +172,29 @@ function PaymentContent() {
       const storedItems = typeof window !== 'undefined' ? sessionStorage.getItem('checkout_items') : null
       const items = storedItems ? JSON.parse(storedItems) : []
       
-      // If no items, create a placeholder item from the total
-      const finalItems = items.length > 0 ? items : [{
-        name: 'Order Items',
-        description: 'Order Items',
-        price: subtotal,
-        quantity: 1,
-      }]
+      // Validate items have required fields for stock reduction
+      if (items.length === 0) {
+        console.error('❌ ERROR: No items found in sessionStorage for stock reduction!')
+        alert('Error: No items found. Please try checking out again.')
+        return
+      }
+      
+      // Validate all items have required fields
+      const invalidItems = items.filter((item: any) => !item.id)
+      if (invalidItems.length > 0) {
+        console.error('❌ ERROR: Some items are missing product ID:', invalidItems)
+        alert('Error: Some items are missing required information. Please try checking out again.')
+        return
+      }
+      
+      console.log('✅ Items validated for stock reduction:', items.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        size: item.size,
+        quantity: item.quantity
+      })))
+      
+      const finalItems = items
       
       // Format full address
       const fullAddress = `${shippingInfo.streetAddress}, ${shippingInfo.city}, ${shippingInfo.state} ${shippingInfo.zipCode}${shippingInfo.country !== 'USA' ? `, ${shippingInfo.country}` : ''}`

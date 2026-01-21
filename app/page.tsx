@@ -32,12 +32,31 @@ export default function Home() {
     
     // Listen for product refresh events (e.g., after purchase)
     const handleRefresh = () => {
+      console.log('Refreshing products after purchase...')
       fetchProducts()
     }
     window.addEventListener('refreshProducts', handleRefresh)
     
+    // Also refresh when page becomes visible (user navigates back)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('Page visible, refreshing products...')
+        fetchProducts()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    // Refresh on focus (user switches back to tab)
+    const handleFocus = () => {
+      console.log('Window focused, refreshing products...')
+      fetchProducts()
+    }
+    window.addEventListener('focus', handleFocus)
+    
     return () => {
       window.removeEventListener('refreshProducts', handleRefresh)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
     }
   }, [])
 
