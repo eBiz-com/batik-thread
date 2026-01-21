@@ -473,34 +473,23 @@ export default function AdminDashboard() {
         return
       }
 
-      const { data, error } = await supabase
-        .from('custom_requests')
-        .delete()
-        .eq('id', requestId)
-        .select()
+      // Use admin API route (bypasses RLS using service role key)
+      const response = await fetch(`/api/admin/delete-custom-request?id=${requestId}`, {
+        method: 'DELETE',
+      })
 
-      if (error) {
-        console.error('Error deleting custom request:', error)
-        console.error('Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
-        alert(`Error deleting custom request: ${error.message}\n\nCheck browser console (F12) for more details.`)
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        console.error('Error deleting custom request:', result.error)
+        alert(`Error deleting custom request: ${result.error || 'Unknown error'}\n\nCheck browser console (F12) for more details.`)
       } else {
-        console.log('Delete result:', data)
-        if (data && data.length > 0) {
-          alert('Custom request deleted successfully!')
-          fetchCustomRequests()
-          // Close modal if it's open for the deleted request
-          if (selectedRequest && selectedRequest.id === requestId) {
-            setSelectedRequest(null)
-          }
-        } else {
-          console.warn('No rows deleted. Request might not exist or RLS policy blocked deletion.')
-          alert('Warning: Request might not exist or you may not have permission to delete it. Please refresh the page.')
-          fetchCustomRequests() // Refresh to update the list
+        console.log('Custom request deleted successfully:', result.deleted)
+        alert('Custom request deleted successfully!')
+        fetchCustomRequests()
+        // Close modal if it's open for the deleted request
+        if (selectedRequest && selectedRequest.id === requestId) {
+          setSelectedRequest(null)
         }
       }
     } catch (error: any) {
