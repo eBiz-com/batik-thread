@@ -170,15 +170,49 @@ function PaymentContent() {
 
       // Get items from sessionStorage (stored during checkout)
       const storedItems = typeof window !== 'undefined' ? sessionStorage.getItem('checkout_items') : null
-      const items = storedItems ? JSON.parse(storedItems) : []
+      console.log('📦 Checking sessionStorage for checkout_items:', {
+        hasStoredItems: !!storedItems,
+        storedItemsLength: storedItems?.length || 0
+      })
+      
+      let items: any[] = []
+      if (storedItems) {
+        try {
+          items = JSON.parse(storedItems)
+          console.log('✅ Parsed items from sessionStorage:', items)
+        } catch (e) {
+          console.error('❌ Error parsing items from sessionStorage:', e)
+        }
+      } else {
+        console.warn('⚠️ No items in sessionStorage. Checking if cart exists...')
+        // Try to get from cart as fallback
+        const cartData = typeof window !== 'undefined' ? sessionStorage.getItem('cart') : null
+        if (cartData) {
+          try {
+            const cart = JSON.parse(cartData)
+            console.log('📦 Found cart in sessionStorage, converting to items:', cart)
+            items = cart.map((item: any) => ({
+              id: item.product?.id || item.id,
+              name: item.product?.name || item.name,
+              description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
+              price: item.product?.price || item.price,
+              quantity: item.quantity || 1,
+              size: item.size || 'M',
+            }))
+            console.log('✅ Converted cart to items:', items)
+          } catch (e) {
+            console.error('❌ Error parsing cart:', e)
+          }
+        }
+      }
       
       // Validate items for stock reduction
       let finalItems = items
       
       if (items.length === 0) {
-        console.error('❌ ERROR: No items found in sessionStorage for stock reduction!')
-        console.error('This means stock will NOT be reduced. Payment will be blocked.')
-        alert('Error: No items found. Please go back and try checking out again.')
+        console.error('❌ ERROR: No items found in sessionStorage or cart!')
+        console.error('SessionStorage keys:', typeof window !== 'undefined' ? Object.keys(sessionStorage) : [])
+        alert('Error: No items found. Please go back to the cart and try checking out again.')
         setProcessing(false)
         return
       }
@@ -186,21 +220,17 @@ function PaymentContent() {
       // Validate all items have required fields (ID is critical for stock reduction)
       const invalidItems = items.filter((item: any) => !item.id)
       if (invalidItems.length > 0) {
-        console.error('❌ ERROR: Some items are missing product ID:', invalidItems)
-        console.error('This means stock will NOT be reduced. Payment will be blocked.')
-        alert('Error: Some items are missing required information. Please go back and try checking out again.')
-        setProcessing(false)
-        return
-      }
-      
-      // Filter to only items with valid IDs
-      finalItems = items.filter((item: any) => item.id)
-      
-      if (finalItems.length === 0) {
-        console.error('❌ ERROR: No valid items with IDs found!')
-        alert('Error: No valid items found. Please go back and try checking out again.')
-        setProcessing(false)
-        return
+        console.warn('⚠️ WARNING: Some items are missing product ID:', invalidItems)
+        console.warn('These items will be skipped for stock reduction, but payment will proceed.')
+        // Filter out invalid items but keep valid ones
+        finalItems = items.filter((item: any) => item.id)
+        
+        if (finalItems.length === 0) {
+          console.error('❌ ERROR: No valid items with IDs found!')
+          alert('Error: Items are missing required information. Please go back and try checking out again.')
+          setProcessing(false)
+          return
+        }
       }
       
       console.log('✅ Items validated for stock reduction:', finalItems.map((item: any) => ({
