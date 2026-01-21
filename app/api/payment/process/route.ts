@@ -200,9 +200,12 @@ export async function POST(request: NextRequest) {
                   .eq('id', item.id)
 
                 if (updateError) {
-                  console.error(`Error updating stock for product ${item.id}:`, updateError)
+                  console.error(`❌ ERROR updating stock for product ${item.id}:`, updateError)
+                  console.error('Update error details:', JSON.stringify(updateError, null, 2))
+                  // Don't fail payment, but log the error
                 } else {
-                  console.log(`Stock updated for product ${item.id}, size ${size}: ${currentSizeStock} -> ${updatedStockBySize[size]}`)
+                  console.log(`✅ Stock updated successfully for product ${item.id}, size ${size}: ${currentSizeStock} -> ${updatedStockBySize[size]}`)
+                  console.log(`✅ Total stock updated: ${totalStock}`)
                 }
               } else {
                 console.warn(`Insufficient stock for product ${item.id}, size ${size}. Requested: ${quantity}, Available: ${currentSizeStock}`)

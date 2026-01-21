@@ -35,6 +35,8 @@ export default function CustomRequestPage() {
   const [honeypot, setHoneypot] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const turnstileRef = useRef<HTMLDivElement>(null)
+  const turnstileWidgetIdRef = useRef<string | null>(null)
+  const turnstileTokenRef = useRef<string | null>(null)
 
   // Load Cloudflare Turnstile script and initialize
   useEffect(() => {
@@ -48,17 +50,21 @@ export default function CustomRequestPage() {
         // Initialize Turnstile after script loads
         if (window.turnstile) {
           const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA' // Test key
-          window.turnstile.render(turnstileRef.current!, {
+          const widgetId = window.turnstile.render(turnstileRef.current!, {
             sitekey: siteKey,
             size: 'invisible',
             callback: (token: string) => {
+              console.log('Turnstile token received')
+              turnstileTokenRef.current = token
               setTurnstileToken(token)
             },
             'error-callback': () => {
+              console.error('Turnstile error callback')
               setTurnstileToken(null)
               setError('Security verification failed. Please refresh the page and try again.')
             },
           })
+          turnstileWidgetIdRef.current = widgetId
         }
       }
       document.head.appendChild(script)
@@ -116,20 +122,48 @@ export default function CustomRequestPage() {
       return
     }
     
-    // Execute Turnstile challenge
-    if (typeof window !== 'undefined' && window.turnstile && turnstileRef.current) {
+    // Execute Turnstile challenge and wait for token
+    if (typeof window !== 'undefined' && window.turnstile && (turnstileRef.current || turnstileWidgetIdRef.current)) {
       try {
-        window.turnstile.execute(turnstileRef.current)
-        // Wait a bit for the token
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Reset token first
+        turnstileTokenRef.current = null
+        setTurnstileToken(null)
+        
+        // Execute Turnstile challenge
+        const widgetId = turnstileWidgetIdRef.current || turnstileRef.current
+        if (widgetId) {
+          window.turnstile.execute(widgetId)
+        }
+        
+        // Wait for token with timeout (max 5 seconds)
+        let attempts = 0
+        const maxAttempts = 50 // 50 * 100ms = 5 seconds
+        while (!turnstileTokenRef.current && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          attempts++
+        }
+        
+        // Check if we got a token
+        if (!turnstileTokenRef.current) {
+          setError('Security verification is taking too long. Please refresh the page and try again.')
+          return
+        }
+        
+        // Update state with the token from ref
+        setTurnstileToken(turnstileTokenRef.current)
       } catch (error) {
         console.error('Turnstile execution error:', error)
+        setError('Security verification failed. Please refresh the page and try again.')
+        return
       }
+    } else {
+      setError('Security verification is not available. Please refresh the page and try again.')
+      return
     }
     
-    // Verify Turnstile token
-    if (!turnstileToken) {
-      setError('Security verification is required. Please wait a moment and try again.')
+    // Final verification - REQUIRED for submission
+    if (!turnstileTokenRef.current) {
+      setError('Security verification is required. Please refresh the page and try again.')
       return
     }
 
