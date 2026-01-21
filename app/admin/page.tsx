@@ -461,25 +461,51 @@ export default function AdminDashboard() {
 
     setIsLoading(true)
     try {
-      const { error } = await supabase
+      console.log('Attempting to delete custom request with ID:', id, 'Type:', typeof id)
+      
+      // Ensure ID is a number
+      const requestId = typeof id === 'string' ? parseInt(id, 10) : id
+      
+      if (isNaN(requestId)) {
+        console.error('Invalid ID:', id)
+        alert('Error: Invalid request ID. Please refresh the page and try again.')
+        setIsLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase
         .from('custom_requests')
         .delete()
-        .eq('id', id)
+        .eq('id', requestId)
+        .select()
 
       if (error) {
         console.error('Error deleting custom request:', error)
-        alert('Error deleting custom request: ' + error.message)
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        alert(`Error deleting custom request: ${error.message}\n\nCheck browser console (F12) for more details.`)
       } else {
-        alert('Custom request deleted successfully!')
-        fetchCustomRequests()
-        // Close modal if it's open for the deleted request
-        if (selectedRequest && selectedRequest.id === id) {
-          setSelectedRequest(null)
+        console.log('Delete result:', data)
+        if (data && data.length > 0) {
+          alert('Custom request deleted successfully!')
+          fetchCustomRequests()
+          // Close modal if it's open for the deleted request
+          if (selectedRequest && selectedRequest.id === requestId) {
+            setSelectedRequest(null)
+          }
+        } else {
+          console.warn('No rows deleted. Request might not exist or RLS policy blocked deletion.')
+          alert('Warning: Request might not exist or you may not have permission to delete it. Please refresh the page.')
+          fetchCustomRequests() // Refresh to update the list
         }
       }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Error deleting custom request')
+    } catch (error: any) {
+      console.error('Unexpected error deleting custom request:', error)
+      alert(`Unexpected error: ${error.message || 'Unknown error'}\n\nCheck browser console (F12) for more details.`)
     } finally {
       setIsLoading(false)
     }
