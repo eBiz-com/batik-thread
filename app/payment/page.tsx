@@ -170,39 +170,63 @@ function PaymentContent() {
 
       // Get items from sessionStorage (stored during checkout)
       const storedItems = typeof window !== 'undefined' ? sessionStorage.getItem('checkout_items') : null
-      console.log('📦 Checking sessionStorage for checkout_items:', {
-        hasStoredItems: !!storedItems,
-        storedItemsLength: storedItems?.length || 0
+      const cartBackup = typeof window !== 'undefined' ? sessionStorage.getItem('cart_backup') : null
+      const cartData = typeof window !== 'undefined' ? sessionStorage.getItem('cart') : null
+      
+      console.log('📦 Checking sessionStorage:', {
+        hasCheckoutItems: !!storedItems,
+        hasCartBackup: !!cartBackup,
+        hasCart: !!cartData,
+        allKeys: typeof window !== 'undefined' ? Object.keys(sessionStorage) : []
       })
       
       let items: any[] = []
+      
+      // Try checkout_items first
       if (storedItems) {
         try {
           items = JSON.parse(storedItems)
-          console.log('✅ Parsed items from sessionStorage:', items)
+          console.log('✅ Parsed checkout_items from sessionStorage:', items)
         } catch (e) {
-          console.error('❌ Error parsing items from sessionStorage:', e)
+          console.error('❌ Error parsing checkout_items:', e)
         }
-      } else {
-        console.warn('⚠️ No items in sessionStorage. Checking if cart exists...')
-        // Try to get from cart as fallback
-        const cartData = typeof window !== 'undefined' ? sessionStorage.getItem('cart') : null
-        if (cartData) {
-          try {
-            const cart = JSON.parse(cartData)
-            console.log('📦 Found cart in sessionStorage, converting to items:', cart)
-            items = cart.map((item: any) => ({
-              id: item.product?.id || item.id,
-              name: item.product?.name || item.name,
-              description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
-              price: item.product?.price || item.price,
-              quantity: item.quantity || 1,
-              size: item.size || 'M',
-            }))
-            console.log('✅ Converted cart to items:', items)
-          } catch (e) {
-            console.error('❌ Error parsing cart:', e)
-          }
+      }
+      
+      // Fallback to cart_backup
+      if (items.length === 0 && cartBackup) {
+        try {
+          const cart = JSON.parse(cartBackup)
+          console.log('📦 Found cart_backup, converting to items:', cart)
+          items = cart.map((item: any) => ({
+            id: item.product?.id || item.id,
+            name: item.product?.name || item.name,
+            description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
+            price: item.product?.price || item.price,
+            quantity: item.quantity || 1,
+            size: item.size || 'M',
+          })).filter((item: any) => item.id) // Only keep items with IDs
+          console.log('✅ Converted cart_backup to items:', items)
+        } catch (e) {
+          console.error('❌ Error parsing cart_backup:', e)
+        }
+      }
+      
+      // Last fallback to cart
+      if (items.length === 0 && cartData) {
+        try {
+          const cart = JSON.parse(cartData)
+          console.log('📦 Found cart, converting to items:', cart)
+          items = cart.map((item: any) => ({
+            id: item.product?.id || item.id,
+            name: item.product?.name || item.name,
+            description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
+            price: item.product?.price || item.price,
+            quantity: item.quantity || 1,
+            size: item.size || 'M',
+          })).filter((item: any) => item.id) // Only keep items with IDs
+          console.log('✅ Converted cart to items:', items)
+        } catch (e) {
+          console.error('❌ Error parsing cart:', e)
         }
       }
       

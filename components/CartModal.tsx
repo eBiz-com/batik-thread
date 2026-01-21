@@ -65,18 +65,61 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
       }
 
       if (data.url) {
+        // Prepare items for storage
+        const checkoutItems = cart.map(item => {
+          if (!item.product || !item.product.id) {
+            console.error('❌ Cart item missing product or product.id:', item)
+            return null
+          }
+          return {
+            id: item.product.id, // CRITICAL: Needed for stock reduction
+            name: item.product.name,
+            description: `${item.product.name} (Size: ${item.size || 'M'})`,
+            price: item.product.price,
+            quantity: item.quantity || 1,
+            size: item.size || 'M', // CRITICAL: Needed for stock reduction
+          }
+        }).filter(item => item !== null) // Remove any null items
+        
+        if (checkoutItems.length === 0) {
+          console.error('❌ No valid items in cart after processing')
+          alert('Error: Cart items are invalid. Please refresh and try again.')
+          setLoading(false)
+          return
+        }
+        
+        console.log('💾 Storing checkout items in sessionStorage:', checkoutItems)
+        
         // Store items in sessionStorage for receipt generation AND stock reduction
-        // Include full product data with id and size for stock management
-        sessionStorage.setItem('checkout_items', JSON.stringify(cart.map(item => ({
-          id: item.product.id, // CRITICAL: Needed for stock reduction
-          name: item.product.name,
-          description: `${item.product.name} (Size: ${item.size})`,
-          price: item.product.price,
-          quantity: item.quantity,
-          size: item.size, // CRITICAL: Needed for stock reduction
-        }))))
+        try {
+          sessionStorage.setItem('checkout_items', JSON.stringify(checkoutItems))
+          console.log('✅ Items stored in sessionStorage')
+          
+          // Also store cart as backup
+          sessionStorage.setItem('cart_backup', JSON.stringify(cart))
+          console.log('✅ Cart backup stored')
+          
+          // Verify it was stored
+          const verify = sessionStorage.getItem('checkout_items')
+          if (!verify) {
+            console.error('❌ Failed to store items in sessionStorage!')
+            alert('Error: Failed to save items. Please try again.')
+            setLoading(false)
+            return
+          }
+          console.log('✅ Verified items in sessionStorage')
+        } catch (e) {
+          console.error('❌ Error storing in sessionStorage:', e)
+          alert('Error: Could not save items. Please check browser settings and try again.')
+          setLoading(false)
+          return
+        }
+        
+        // Small delay to ensure sessionStorage is written
+        await new Promise(resolve => setTimeout(resolve, 100))
         
         // Redirect to demo payment page
+        console.log('🔄 Redirecting to payment page...')
         window.location.href = data.url
       } else {
         throw new Error('No checkout URL received')
