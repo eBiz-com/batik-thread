@@ -16,7 +16,32 @@ import Footer from '@/components/Footer'
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
-  const [cart, setCart] = useState<CartItem[]>([])
+  // Load cart from sessionStorage on mount
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = sessionStorage.getItem('cart')
+        if (saved) {
+          return JSON.parse(saved)
+        }
+      } catch (e) {
+        console.error('Error loading cart from sessionStorage:', e)
+      }
+    }
+    return []
+  })
+  
+  // Save cart to sessionStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('cart', JSON.stringify(cart))
+        console.log('💾 Cart saved to sessionStorage:', cart.length, 'items')
+      } catch (e) {
+        console.error('Error saving cart to sessionStorage:', e)
+      }
+    }
+  }, [cart])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)

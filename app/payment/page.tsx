@@ -168,22 +168,36 @@ function PaymentContent() {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 2000))
 
-      // Get items from sessionStorage (stored during checkout)
+      // Get items from multiple sources (sessionStorage, URL params)
       const storedItems = typeof window !== 'undefined' ? sessionStorage.getItem('checkout_items') : null
       const cartBackup = typeof window !== 'undefined' ? sessionStorage.getItem('cart_backup') : null
       const cartData = typeof window !== 'undefined' ? sessionStorage.getItem('cart') : null
       
-      console.log('📦 Checking sessionStorage:', {
+      // Also check URL parameters as backup
+      const urlItems = searchParams.get('items')
+      
+      console.log('📦 Checking for items:', {
         hasCheckoutItems: !!storedItems,
         hasCartBackup: !!cartBackup,
         hasCart: !!cartData,
+        hasUrlItems: !!urlItems,
         allKeys: typeof window !== 'undefined' ? Object.keys(sessionStorage) : []
       })
       
       let items: any[] = []
       
-      // Try checkout_items first
-      if (storedItems) {
+      // Try URL parameters first (most reliable)
+      if (urlItems) {
+        try {
+          items = JSON.parse(decodeURIComponent(urlItems))
+          console.log('✅ Parsed items from URL parameters:', items)
+        } catch (e) {
+          console.error('❌ Error parsing items from URL:', e)
+        }
+      }
+      
+      // Try checkout_items from sessionStorage
+      if (items.length === 0 && storedItems) {
         try {
           items = JSON.parse(storedItems)
           console.log('✅ Parsed checkout_items from sessionStorage:', items)
