@@ -172,29 +172,40 @@ function PaymentContent() {
       const storedItems = typeof window !== 'undefined' ? sessionStorage.getItem('checkout_items') : null
       const items = storedItems ? JSON.parse(storedItems) : []
       
-      // Validate items have required fields for stock reduction
+      // Validate items for stock reduction (but don't block payment)
+      let finalItems = items
+      
       if (items.length === 0) {
-        console.error('❌ ERROR: No items found in sessionStorage for stock reduction!')
-        alert('Error: No items found. Please try checking out again.')
-        return
+        console.warn('⚠️ WARNING: No items found in sessionStorage for stock reduction!')
+        console.warn('Payment will proceed, but stock may not be reduced. This might happen if:')
+        console.warn('1. SessionStorage was cleared')
+        console.warn('2. User navigated directly to payment page')
+        console.warn('3. Browser privacy settings blocked sessionStorage')
+        // Don't block payment - just log warning
+        // Create placeholder items from URL params if available
+        finalItems = [{
+          name: 'Order Items',
+          description: 'Order Items',
+          price: subtotal,
+          quantity: 1,
+        }]
+      } else {
+        // Validate all items have required fields
+        const invalidItems = items.filter((item: any) => !item.id)
+        if (invalidItems.length > 0) {
+          console.warn('⚠️ WARNING: Some items are missing product ID:', invalidItems)
+          console.warn('Payment will proceed, but stock may not be reduced for these items.')
+          // Filter out invalid items but keep valid ones
+          finalItems = items.filter((item: any) => item.id)
+        } else {
+          console.log('✅ Items validated for stock reduction:', items.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            size: item.size,
+            quantity: item.quantity
+          })))
+        }
       }
-      
-      // Validate all items have required fields
-      const invalidItems = items.filter((item: any) => !item.id)
-      if (invalidItems.length > 0) {
-        console.error('❌ ERROR: Some items are missing product ID:', invalidItems)
-        alert('Error: Some items are missing required information. Please try checking out again.')
-        return
-      }
-      
-      console.log('✅ Items validated for stock reduction:', items.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        size: item.size,
-        quantity: item.quantity
-      })))
-      
-      const finalItems = items
       
       // Format full address
       const fullAddress = `${shippingInfo.streetAddress}, ${shippingInfo.city}, ${shippingInfo.state} ${shippingInfo.zipCode}${shippingInfo.country !== 'USA' ? `, ${shippingInfo.country}` : ''}`
