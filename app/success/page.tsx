@@ -55,6 +55,15 @@ function SuccessContent() {
         }
       }
       setLoading(false)
+      
+      // Clear cart and refresh products after successful purchase
+      sessionStorage.removeItem('cart')
+      // Trigger a page refresh to update product stock
+      // This ensures users see updated stock levels
+      if (window.location.pathname === '/success') {
+        // Dispatch custom event to refresh products on home page
+        window.dispatchEvent(new CustomEvent('refreshProducts'))
+      }
     }
   }, [])
 

@@ -176,6 +176,25 @@ export default function AdminDashboard() {
     setPassword('')
   }
 
+  // Helper function to get total stock for a product
+  const getTotalStock = (product: Product): number => {
+    if (product.stock_by_size && typeof product.stock_by_size === 'object') {
+      const stockValues: number[] = Object.values(product.stock_by_size) as number[]
+      return stockValues.reduce((sum: number, val: number) => sum + (val || 0), 0)
+    }
+    return product.stock || 0
+  }
+
+  // Helper function to check if product is low stock (1 or less)
+  const isLowStock = (product: Product): boolean => {
+    return getTotalStock(product) <= 1
+  }
+
+  // Helper function to check if product is out of stock
+  const isOutOfStock = (product: Product): boolean => {
+    return getTotalStock(product) === 0
+  }
+
   const fetchProducts = async () => {
     setIsLoading(true)
     try {
@@ -188,6 +207,27 @@ export default function AdminDashboard() {
         console.error('Error fetching products:', error)
       } else if (data) {
         setProducts(data)
+        
+        // Check for low stock products and show notification
+        const lowStockProducts = data.filter(p => isLowStock(p) && !isOutOfStock(p))
+        const outOfStockProducts = data.filter(p => isOutOfStock(p))
+        
+        if (lowStockProducts.length > 0) {
+          const productNames = lowStockProducts.map(p => p.name).join(', ')
+          console.warn(`⚠️ Low Stock Alert: ${lowStockProducts.length} product(s) have only 1 quantity left: ${productNames}`)
+          // You can also show a browser notification here if needed
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification('Low Stock Alert', {
+              body: `${lowStockProducts.length} product(s) have only 1 quantity left: ${productNames}`,
+              icon: '/favicon.ico'
+            })
+          }
+        }
+        
+        if (outOfStockProducts.length > 0) {
+          const productNames = outOfStockProducts.map(p => p.name).join(', ')
+          console.warn(`🚫 Out of Stock: ${outOfStockProducts.length} product(s) are out of stock: ${productNames}`)
+        }
       }
     } catch (error) {
       console.error('Error:', error)
@@ -195,6 +235,13 @@ export default function AdminDashboard() {
       setIsLoading(false)
     }
   }
+  
+  // Request notification permission on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -998,6 +1045,43 @@ export default function AdminDashboard() {
           </form>
         </div>
 
+        {/* Low Stock Alert Banner */}
+        {(() => {
+          const lowStockProducts = products.filter(p => isLowStock(p) && !isOutOfStock(p))
+          const outOfStockProducts = products.filter(p => isOutOfStock(p))
+          
+          if (lowStockProducts.length > 0 || outOfStockProducts.length > 0) {
+            return (
+              <div className="mb-6 space-y-2">
+                {lowStockProducts.length > 0 && (
+                  <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4 flex items-center gap-3">
+                    <AlertTriangle className="text-yellow-400" size={20} />
+                    <div className="flex-1">
+                      <p className="text-yellow-400 font-semibold">Low Stock Alert</p>
+                      <p className="text-gray-300 text-sm">
+                        {lowStockProducts.length} product(s) have only 1 quantity left: {lowStockProducts.map(p => p.name).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {outOfStockProducts.length > 0 && (
+                  <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+                    <AlertTriangle className="text-red-400" size={20} />
+                    <div className="flex-1">
+                      <p className="text-red-400 font-semibold">Out of Stock</p>
+                      <p className="text-gray-300 text-sm">
+                        {outOfStockProducts.length} product(s) are out of stock: {outOfStockProducts.map(p => p.name).join(', ')}
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1">These products are automatically hidden from the storefront.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          }
+          return null
+        })()}
+
         {/* Products Table */}
         <div className="bg-gray-900 p-6 rounded-xl overflow-x-auto">
           <h2 className="text-2xl font-serif text-gold mb-4">Products</h2>
@@ -1034,7 +1118,42 @@ export default function AdminDashboard() {
                     <td className="p-4">{product.name}</td>
                     <td className="p-4">${product.price}</td>
                     <td className="p-4">{product.gender}</td>
-                    <td className="p-4">{product.stock ?? 'N/A'}</td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const totalStock = getTotalStock(product)
+                          const isLow = isLowStock(product)
+                          const isOut = isOutOfStock(product)
+                          
+                          if (product.stock_by_size && typeof product.stock_by_size === 'object') {
+                            const stockBySize = product.stock_by_size as { [key: string]: number }
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <span className={isOut ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-green-400'}>
+                                  Total: {totalStock}
+                                  {isLow && !isOut && <AlertTriangle size={14} className="inline-block ml-1" />}
+                                  {isOut && <span className="text-xs"> (OUT OF STOCK)</span>}
+                                </span>
+                                <div className="text-xs text-gray-400">
+                                  {Object.entries(stockBySize).map(([size, stock]) => (
+                                    <span key={size} className={stock === 0 ? 'text-red-400' : stock === 1 ? 'text-yellow-400' : ''}>
+                                      {size}:{stock}{' '}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          }
+                          return (
+                            <span className={isOut ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-green-400'}>
+                              {totalStock}
+                              {isLow && !isOut && <AlertTriangle size={14} className="inline-block ml-1" />}
+                              {isOut && <span className="text-xs ml-1">(OUT OF STOCK)</span>}
+                            </span>
+                          )
+                        })()}
+                      </div>
+                    </td>
                     <td className="p-4">
                       <button
                         onClick={() => handleDelete(product.id)}

@@ -29,6 +29,16 @@ export default function Home() {
 
   useEffect(() => {
     fetchProducts()
+    
+    // Listen for product refresh events (e.g., after purchase)
+    const handleRefresh = () => {
+      fetchProducts()
+    }
+    window.addEventListener('refreshProducts', handleRefresh)
+    
+    return () => {
+      window.removeEventListener('refreshProducts', handleRefresh)
+    }
   }, [])
 
   useEffect(() => {
