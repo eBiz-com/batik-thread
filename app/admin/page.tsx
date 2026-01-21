@@ -1121,29 +1121,51 @@ export default function AdminDashboard() {
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         {(() => {
-                          const totalStock = getTotalStock(product)
-                          const isLow = isLowStock(product)
-                          const isOut = isOutOfStock(product)
-                          
                           if (product.stock_by_size && typeof product.stock_by_size === 'object') {
                             const stockBySize = product.stock_by_size as { [key: string]: number }
+                            const totalStock = getTotalStock(product)
+                            const isOut = isOutOfStock(product)
+                            
                             return (
                               <div className="flex flex-col gap-1">
-                                <span className={isOut ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-green-400'}>
+                                <span className={isOut ? 'text-red-400' : 'text-gray-300'}>
                                   Total: {totalStock}
-                                  {isLow && !isOut && <AlertTriangle size={14} className="inline-block ml-1" />}
-                                  {isOut && <span className="text-xs"> (OUT OF STOCK)</span>}
+                                  {isOut && <span className="text-xs ml-1">(OUT OF STOCK)</span>}
                                 </span>
-                                <div className="text-xs text-gray-400">
-                                  {Object.entries(stockBySize).map(([size, stock]) => (
-                                    <span key={size} className={stock === 0 ? 'text-red-400' : stock === 1 ? 'text-yellow-400' : ''}>
-                                      {size}:{stock}{' '}
-                                    </span>
-                                  ))}
+                                <div className="text-xs flex flex-wrap gap-2">
+                                  {Object.entries(stockBySize).map(([size, stock]) => {
+                                    const sizeIsOut = stock === 0
+                                    const sizeIsLow = stock === 1
+                                    const sizeIsGood = stock > 1
+                                    
+                                    return (
+                                      <span 
+                                        key={size} 
+                                        className={
+                                          sizeIsOut 
+                                            ? 'text-red-400 font-semibold' 
+                                            : sizeIsLow 
+                                            ? 'text-yellow-400 font-semibold' 
+                                            : sizeIsGood
+                                            ? 'text-green-400'
+                                            : 'text-gray-400'
+                                        }
+                                      >
+                                        {size}: {stock}
+                                        {sizeIsLow && <AlertTriangle size={12} className="inline-block ml-1" />}
+                                        {sizeIsOut && <span className="ml-1">(OUT)</span>}
+                                      </span>
+                                    )
+                                  })}
                                 </div>
                               </div>
                             )
                           }
+                          // Legacy stock (no size breakdown)
+                          const totalStock = getTotalStock(product)
+                          const isLow = isLowStock(product)
+                          const isOut = isOutOfStock(product)
+                          
                           return (
                             <span className={isOut ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-green-400'}>
                               {totalStock}
