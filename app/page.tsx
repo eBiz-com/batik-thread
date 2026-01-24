@@ -229,7 +229,10 @@ export default function Home() {
     }
 
     if (filters.color !== 'all') {
-      filtered = filtered.filter((p) => p.color === filters.color)
+      filtered = filtered.filter((p) => {
+        if (!p.color) return false // Skip products without color
+        return p.color.toLowerCase() === filters.color.toLowerCase()
+      })
     }
 
     filtered = filtered.filter((p) => p.price <= filters.maxPrice)

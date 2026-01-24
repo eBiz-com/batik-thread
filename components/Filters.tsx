@@ -34,6 +34,15 @@ export default function Filters({ filters, setFilters }: FiltersProps) {
         <option value="blue">Blue</option>
         <option value="green">Green</option>
         <option value="black">Black</option>
+        <option value="white">White</option>
+        <option value="brown">Brown</option>
+        <option value="purple">Purple</option>
+        <option value="pink">Pink</option>
+        <option value="orange">Orange</option>
+        <option value="yellow">Yellow</option>
+        <option value="gray">Gray</option>
+        <option value="grey">Grey</option>
+        <option value="multicolor">Multicolor</option>
       </select>
 
       <div className="flex items-center gap-2">
