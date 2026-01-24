@@ -79,12 +79,12 @@ export async function POST(request: NextRequest) {
     })
     
     // Encode items in URL (primary method - more reliable than sessionStorage)
-    // Use encodeURIComponent to properly encode the JSON string
+    // URLSearchParams will automatically encode, so don't pre-encode
     try {
       const itemsJson = JSON.stringify(items)
-      const encodedItems = encodeURIComponent(itemsJson)
-      baseParams.append('items', encodedItems)
-      console.log('✅ Items encoded in URL, length:', encodedItems.length)
+      baseParams.append('items', itemsJson) // URLSearchParams handles encoding
+      console.log('✅ Items added to URL params, JSON length:', itemsJson.length)
+      console.log('📋 Items preview:', itemsJson.substring(0, 200))
     } catch (e) {
       console.error('❌ Error encoding items in URL:', e)
     }

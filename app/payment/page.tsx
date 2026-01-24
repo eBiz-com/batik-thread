@@ -14,6 +14,21 @@ function PaymentContent() {
   const shipping = parseFloat(searchParams.get('shipping') || '0')
   const total = parseFloat(searchParams.get('total') || (subtotal + tax + shipping).toString())
   
+  // Debug: Log all URL parameters on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const currentUrl = window.location.href
+      const urlParams = new URLSearchParams(window.location.search)
+      console.log('🔍 Payment page loaded:', {
+        fullUrl: currentUrl.substring(0, 200), // First 200 chars
+        allParams: Object.fromEntries(urlParams.entries()),
+        hasItemsParam: urlParams.has('items'),
+        itemsParamLength: urlParams.get('items')?.length || 0,
+        itemsParamPreview: urlParams.get('items')?.substring(0, 100) || 'none'
+      })
+    }
+  }, [])
+  
   const [shippingInfo, setShippingInfo] = useState({
     fullName: '',
     phone: '',
@@ -176,40 +191,61 @@ function PaymentContent() {
       // Also check URL parameters as backup
       const urlItems = searchParams.get('items')
       
+      // Also try reading directly from window.location as fallback
+      let urlItemsDirect: string | null = null
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search)
+        urlItemsDirect = urlParams.get('items')
+      }
+      
       console.log('📦 Checking for items:', {
         hasCheckoutItems: !!storedItems,
         hasCartBackup: !!cartBackup,
         hasCart: !!cartData,
         hasUrlItems: !!urlItems,
-        allKeys: typeof window !== 'undefined' ? Object.keys(sessionStorage) : []
+        hasUrlItemsDirect: !!urlItemsDirect,
+        urlItemsLength: urlItems?.length || 0,
+        urlItemsDirectLength: urlItemsDirect?.length || 0,
+        allKeys: typeof window !== 'undefined' ? Object.keys(sessionStorage) : [],
+        currentUrl: typeof window !== 'undefined' ? window.location.href.substring(0, 300) : 'N/A'
       })
       
       let items: any[] = []
       
       // Try URL parameters first (most reliable)
-      if (urlItems) {
+      // Try both searchParams.get and direct URL parsing
+      const itemsParam = urlItems || urlItemsDirect
+      if (itemsParam) {
         try {
-          // Items might be double-encoded, so try decoding twice if needed
-          let decoded = urlItems
+          console.log('🔍 Attempting to parse items from URL, length:', itemsParam.length)
+          // Items might be double-encoded, so try decoding
+          let decoded = itemsParam
           try {
-            decoded = decodeURIComponent(urlItems)
-            // If it's still a JSON string (not an object), it might need another decode
-            if (decoded.startsWith('"') || decoded.startsWith('{')) {
-              items = JSON.parse(decoded)
-            } else {
+            decoded = decodeURIComponent(itemsParam)
+            console.log('🔍 After first decode, length:', decoded.length, 'starts with:', decoded.substring(0, 50))
+            // Try parsing
+            items = JSON.parse(decoded)
+            console.log('✅ Parsed items from URL parameters (first decode):', items.length, 'items')
+          } catch (firstError) {
+            console.log('⚠️ First decode/parse failed, trying second decode...')
+            try {
               // Try one more decode
               decoded = decodeURIComponent(decoded)
               items = JSON.parse(decoded)
+              console.log('✅ Parsed items from URL parameters (second decode):', items.length, 'items')
+            } catch (secondError) {
+              // If decode fails, try parsing directly
+              console.log('⚠️ Second decode failed, trying direct parse...')
+              items = JSON.parse(itemsParam)
+              console.log('✅ Parsed items from URL parameters (direct):', items.length, 'items')
             }
-          } catch (decodeError) {
-            // If decode fails, try parsing directly
-            items = JSON.parse(urlItems)
           }
-          console.log('✅ Parsed items from URL parameters:', items.length, 'items')
         } catch (e) {
           console.error('❌ Error parsing items from URL:', e)
-          console.error('Raw URL items value:', urlItems?.substring(0, 100))
+          console.error('Raw URL items value (first 200 chars):', itemsParam.substring(0, 200))
         }
+      } else {
+        console.warn('⚠️ No items parameter found in URL at all')
       }
       
       // Try checkout_items from sessionStorage
