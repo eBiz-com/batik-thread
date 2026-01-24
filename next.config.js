@@ -2,13 +2,18 @@
 const nextConfig = {
   images: {
     domains: ['images.pexels.com', 'gbetxpvmtmnkbqtosjso.supabase.co'],
-    // Allow base64 images (unoptimized) - needed for current storage method
-    unoptimized: false,
-    // Increase image quality for better display
-    formats: ['image/webp', 'image/avif'],
+    // Remote patterns for better image optimization
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'gbetxpvmtmnkbqtosjso.supabase.co',
+      },
+    ],
   },
-  // Enable compression
-  compress: true,
 }
 
 module.exports = nextConfig
