@@ -88,34 +88,31 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
           return
         }
         
-        console.log('💾 Storing checkout items in sessionStorage BEFORE redirect:', checkoutItems)
+        console.log('💾 Attempting to store checkout items in sessionStorage (backup method):', checkoutItems)
         
-        // CRITICAL: Store in sessionStorage BEFORE redirect to ensure it's available
-        // Store in multiple places for redundancy
+        // Try to store in sessionStorage as backup (database is primary method)
+        // Don't block checkout if this fails - database will handle it
         try {
           sessionStorage.setItem('checkout_items', JSON.stringify(checkoutItems))
           sessionStorage.setItem('cart_backup', JSON.stringify(cart))
           sessionStorage.setItem('cart', JSON.stringify(cart))
           
-          // Verify storage immediately
+          // Verify storage (but don't block if it fails)
           const verify = sessionStorage.getItem('checkout_items')
-          if (!verify) {
-            console.error('❌ CRITICAL: Failed to store items in sessionStorage!')
-            alert('Error: Could not save cart data. Please check browser settings and try again.')
-            setLoading(false)
-            return
+          if (verify) {
+            console.log('✅ Items stored in sessionStorage (backup)')
+            console.log('📋 SessionStorage keys:', Object.keys(sessionStorage))
+          } else {
+            console.warn('⚠️ Could not verify sessionStorage, but continuing anyway (database will store items)')
           }
           
-          console.log('✅ Items stored and verified in sessionStorage')
-          console.log('📋 SessionStorage keys:', Object.keys(sessionStorage))
-          
           // Small delay to ensure storage is committed
-          await new Promise(resolve => setTimeout(resolve, 100))
+          await new Promise(resolve => setTimeout(resolve, 50))
         } catch (e) {
-          console.error('❌ CRITICAL: Error storing in sessionStorage:', e)
-          alert('Error: Could not save cart data. Please check browser settings and try again.')
-          setLoading(false)
-          return
+          // Don't block checkout - database is the primary storage method
+          console.warn('⚠️ Could not store in sessionStorage (browser may block it):', e)
+          console.warn('⚠️ Continuing anyway - items will be stored in database via checkout API')
+          // Continue with checkout - database will handle storage
         }
         
         // Redirect to payment page
