@@ -1,5 +1,8 @@
 'use client'
 
+import { useMemo } from 'react'
+import { Product } from '@/lib/supabase'
+
 interface FiltersProps {
   filters: {
     gender: string
@@ -7,9 +10,21 @@ interface FiltersProps {
     maxPrice: number
   }
   setFilters: (filters: any) => void
+  products: Product[]
 }
 
-export default function Filters({ filters, setFilters }: FiltersProps) {
+export default function Filters({ filters, setFilters, products }: FiltersProps) {
+  // Get unique colors from actual products
+  const availableColors = useMemo(() => {
+    const colors = new Set<string>()
+    products.forEach(product => {
+      if (product.color && product.color.trim()) {
+        colors.add(product.color.toLowerCase().trim())
+      }
+    })
+    return Array.from(colors).sort()
+  }, [products])
+
   return (
     <div className="flex flex-wrap justify-center items-center gap-4 py-8 px-4">
       <select
@@ -29,20 +44,31 @@ export default function Filters({ filters, setFilters }: FiltersProps) {
         className="px-4 py-2 rounded-full bg-gray-800 text-gold border-none outline-none"
       >
         <option value="all">All Colors</option>
-        <option value="gold">Gold</option>
-        <option value="red">Red</option>
-        <option value="blue">Blue</option>
-        <option value="green">Green</option>
-        <option value="black">Black</option>
-        <option value="white">White</option>
-        <option value="brown">Brown</option>
-        <option value="purple">Purple</option>
-        <option value="pink">Pink</option>
-        <option value="orange">Orange</option>
-        <option value="yellow">Yellow</option>
-        <option value="gray">Gray</option>
-        <option value="grey">Grey</option>
-        <option value="multicolor">Multicolor</option>
+        {availableColors.length > 0 ? (
+          availableColors.map(color => (
+            <option key={color} value={color}>
+              {color.charAt(0).toUpperCase() + color.slice(1)}
+            </option>
+          ))
+        ) : (
+          // Fallback to common colors if no products yet
+          <>
+            <option value="gold">Gold</option>
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="black">Black</option>
+            <option value="white">White</option>
+            <option value="brown">Brown</option>
+            <option value="purple">Purple</option>
+            <option value="pink">Pink</option>
+            <option value="orange">Orange</option>
+            <option value="yellow">Yellow</option>
+            <option value="gray">Gray</option>
+            <option value="grey">Grey</option>
+            <option value="multicolor">Multicolor</option>
+          </>
+        )}
       </select>
 
       <div className="flex items-center gap-2">

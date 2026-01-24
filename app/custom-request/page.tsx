@@ -109,6 +109,14 @@ export default function CustomRequestPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation() // Prevent event bubbling
+    
+    // Prevent double submission
+    if (loading || submitted) {
+      console.warn('Form already submitting or submitted')
+      return
+    }
+    
     setError('')
     
     // Honeypot check - if filled, it's a bot
@@ -123,6 +131,14 @@ export default function CustomRequestPage() {
     if (formFillTime < 5000) {
       console.warn('Suspicious: Form submitted too quickly', formFillTime)
       setError(`Please take more time to fill out the form completely.`)
+      return
+    }
+    
+    // Validate required fields are filled
+    if (!formData.customer_name || !formData.customer_email || !formData.customer_phone || 
+        !formData.event_name || !formData.event_date || !formData.quantity || 
+        !formData.sizes || !formData.description) {
+      setError('Please fill out all required fields.')
       return
     }
     

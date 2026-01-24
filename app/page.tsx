@@ -339,7 +339,7 @@ export default function Home() {
       {/* Shop Section */}
       <section id="shop" className="py-12">
         <div className="container mx-auto px-4">
-          <Filters filters={filters} setFilters={setFilters} />
+            <Filters filters={filters} setFilters={setFilters} products={products} />
           <ProductGrid products={filteredProducts} onProductClick={openProductModal} />
         </div>
       </section>
