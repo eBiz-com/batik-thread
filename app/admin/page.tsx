@@ -96,6 +96,21 @@ export default function AdminDashboard() {
           })
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'transactions',
+        },
+        (payload) => {
+          console.log('Transaction updated:', payload.new)
+          // Refresh when transaction status changes
+          fetchRecentPayments().catch(err => {
+            console.error('Error refreshing after transaction update:', err)
+          })
+        }
+      )
       .subscribe()
 
     // Subscribe to new receipts
@@ -118,26 +133,26 @@ export default function AdminDashboard() {
       )
       .subscribe()
 
-    // Also set up polling as backup (every 10 seconds when on payments tab)
-    let pollInterval: NodeJS.Timeout | null = null
-    if (activeTab === 'payments') {
-      pollInterval = setInterval(() => {
+    // Set up polling as backup (every 30 seconds) - works on all tabs
+    // This ensures data refreshes even if real-time subscriptions fail
+    const pollInterval = setInterval(() => {
+      // Only poll if on payments tab to avoid unnecessary requests
+      if (activeTab === 'payments') {
+        console.log('Auto-refreshing transactions (polling)...')
         fetchRecentPayments().catch(err => {
           console.error('Error polling payments:', err)
         })
-      }, 10000) // Poll every 10 seconds
-    }
+      }
+    }, 30000) // Poll every 30 seconds
 
     // Cleanup subscriptions and polling on unmount
     return () => {
       console.log('Cleaning up subscriptions...')
       supabase.removeChannel(transactionsChannel)
       supabase.removeChannel(receiptsChannel)
-      if (pollInterval) {
-        clearInterval(pollInterval)
-      }
+      clearInterval(pollInterval)
     }
-  }, [isAuthenticated, activeTab])
+  }, [isAuthenticated, activeTab, fetchRecentPayments])
 
   useEffect(() => {
     // Fetch payments when payments tab is active
@@ -1343,11 +1358,27 @@ export default function AdminDashboard() {
         {activeTab === 'payments' && (
           <>
             {/* Payment Statistics */}
-            {lastUpdate && (
-              <div className="mb-4 text-sm text-gray-400 text-right">
-                Last updated: {lastUpdate.toLocaleTimeString()}
-              </div>
-            )}
+            <div className="mb-4 flex justify-between items-center">
+              {lastUpdate && (
+                <div className="text-sm text-gray-400">
+                  Last updated: {lastUpdate.toLocaleTimeString()}
+                  {isRefreshing && (
+                    <span className="ml-2 text-gold">
+                      <RefreshCw size={14} className="inline-block animate-spin" /> Auto-refreshing...
+                    </span>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => fetchRecentPayments()}
+                disabled={isRefreshing}
+                className={`flex items-center gap-2 px-3 py-1.5 border border-gold text-gold rounded-lg hover:bg-gold hover:text-black transition-all text-sm ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title="Refresh data"
+              >
+                <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Now'}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-900 p-6 rounded-xl text-center">
                 <h3 className="text-gold mb-2">Total Revenue</h3>
