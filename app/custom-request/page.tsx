@@ -53,14 +53,17 @@ export default function CustomRequestPage() {
           const widgetId = window.turnstile.render(turnstileRef.current!, {
             sitekey: siteKey,
             size: 'invisible',
+            execution: 'explicit', // CRITICAL: Only execute when explicitly called, not automatically
             callback: (token: string) => {
-              console.log('Turnstile token received')
+              console.log('Turnstile token received (stored, waiting for user click)')
               turnstileTokenRef.current = token
               setTurnstileToken(token)
-              // DO NOT auto-submit - user must click submit button
+              // DO NOT auto-submit - user must explicitly click submit button
+              // Token is stored and will be used when form is submitted
             },
             'error-callback': () => {
               console.error('Turnstile error callback')
+              turnstileTokenRef.current = null
               setTurnstileToken(null)
               setError('Security verification failed. Please refresh the page and try again.')
             },
@@ -129,9 +132,11 @@ export default function CustomRequestPage() {
       return
     }
 
-    // Check if we already have a valid token
-    if (!turnstileTokenRef.current && !turnstileToken) {
-      // Execute Turnstile challenge and wait for token
+    // Get or execute Turnstile challenge
+    let finalToken = turnstileTokenRef.current || turnstileToken
+    
+    // If no token exists, execute challenge and wait
+    if (!finalToken) {
       try {
         // Reset token first
         turnstileTokenRef.current = null
@@ -144,7 +149,7 @@ export default function CustomRequestPage() {
           return
         }
         
-        console.log('Executing Turnstile challenge...')
+        console.log('Executing Turnstile challenge (user clicked submit)...')
         window.turnstile.execute(widgetId)
         
         // Wait for token with timeout (max 5 seconds)
@@ -163,8 +168,9 @@ export default function CustomRequestPage() {
         }
         
         // Update state with the token from ref
-        setTurnstileToken(turnstileTokenRef.current)
-        console.log('Turnstile token ready for submission')
+        finalToken = turnstileTokenRef.current
+        setTurnstileToken(finalToken)
+        console.log('Turnstile token received and ready for submission')
       } catch (error) {
         console.error('Turnstile execution error:', error)
         setError('Security verification failed. Please refresh the page and try again.')
@@ -173,7 +179,6 @@ export default function CustomRequestPage() {
     }
     
     // Final verification - REQUIRED for submission
-    const finalToken = turnstileTokenRef.current || turnstileToken
     if (!finalToken) {
       console.error('No Turnstile token available for submission')
       setError('Security verification is required. Please refresh the page and try again.')
@@ -514,7 +519,7 @@ export default function CustomRequestPage() {
               </Link>
               <button
                 type="submit"
-                disabled={loading || !turnstileToken}
+                disabled={loading}
                 className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (

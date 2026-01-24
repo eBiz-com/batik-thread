@@ -50,6 +50,7 @@ export default function AdminDashboard() {
   const [productImages, setProductImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
   useEffect(() => {
     // Check if already logged in
@@ -312,6 +313,18 @@ export default function AdminDashboard() {
         imageUrls = formData.images.split(',').map((url) => url.trim()).filter(Boolean)
       }
 
+      // For editing, allow keeping existing images if no new ones uploaded
+      if (imageUrls.length === 0 && !editingProduct) {
+        alert('Please upload at least one product image')
+        setIsLoading(false)
+        return
+      }
+      
+      // If editing and no new images, keep existing images
+      if (editingProduct && imageUrls.length === 0 && Array.isArray(editingProduct.images) && editingProduct.images.length > 0) {
+        imageUrls = editingProduct.images
+      }
+      
       if (imageUrls.length === 0) {
         alert('Please upload at least one product image')
         setIsLoading(false)
@@ -360,44 +373,81 @@ export default function AdminDashboard() {
         })
       )
 
-      console.log('Attempting to insert product:', cleanedProductData)
+      // If editing, update existing product; otherwise insert new
+      if (editingProduct) {
+        console.log('Attempting to update product:', editingProduct.id, cleanedProductData)
+        const { data, error } = await supabase
+          .from('products')
+          .update(cleanedProductData)
+          .eq('id', editingProduct.id)
+          .select()
 
-      const { data, error } = await supabase.from('products').insert([cleanedProductData]).select()
-
-      if (error) {
-        console.error('Error adding product:', error)
-        const errorDetails = {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
+        if (error) {
+          console.error('Error updating product:', error)
+          alert(`Error updating product: ${error.message}`)
+        } else {
+          console.log('Product updated successfully:', data)
+          alert('Product updated successfully!')
+          setEditingProduct(null)
+          setFormData({
+            name: '',
+            price: '',
+            gender: 'Men',
+            color: '',
+            fabric: '',
+            origin: '',
+            story: '',
+            images: '',
+            stock: '',
+            stockS: '',
+            stockM: '',
+            stockL: '',
+            stockXL: '',
+          })
+          setProductImages([])
+          setImagePreviews([])
+          imagePreviews.forEach(url => URL.revokeObjectURL(url))
+          fetchProducts()
         }
-        console.error('Error details:', errorDetails)
-        console.error('Full error object:', error)
-        alert(`Error adding product: ${error.message}\n\nCheck browser console (F12) for more details.`)
       } else {
-        console.log('Product added successfully:', data)
-        alert('Product added successfully!')
-        setFormData({
-          name: '',
-          price: '',
-          gender: 'Men',
-          color: '',
-          fabric: '',
-          origin: '',
-          story: '',
-          images: '',
-          stock: '',
-          stockS: '',
-          stockM: '',
-          stockL: '',
-          stockXL: '',
-        })
-        setProductImages([])
-        setImagePreviews([])
-        // Clean up object URLs
-        imagePreviews.forEach(url => URL.revokeObjectURL(url))
-        fetchProducts()
+        console.log('Attempting to insert product:', cleanedProductData)
+        const { data, error } = await supabase.from('products').insert([cleanedProductData]).select()
+
+        if (error) {
+          console.error('Error adding product:', error)
+          const errorDetails = {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          }
+          console.error('Error details:', errorDetails)
+          console.error('Full error object:', error)
+          alert(`Error adding product: ${error.message}\n\nCheck browser console (F12) for more details.`)
+        } else {
+          console.log('Product added successfully:', data)
+          alert('Product added successfully!')
+          setFormData({
+            name: '',
+            price: '',
+            gender: 'Men',
+            color: '',
+            fabric: '',
+            origin: '',
+            story: '',
+            images: '',
+            stock: '',
+            stockS: '',
+            stockM: '',
+            stockL: '',
+            stockXL: '',
+          })
+          setProductImages([])
+          setImagePreviews([])
+          // Clean up object URLs
+          imagePreviews.forEach(url => URL.revokeObjectURL(url))
+          fetchProducts()
+        }
       }
     } catch (error) {
       console.error('Error:', error)
@@ -405,6 +455,58 @@ export default function AdminDashboard() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product)
+    // Populate form with product data
+    const stockBySize = product.stock_by_size as { [key: string]: number } | undefined
+    setFormData({
+      name: product.name || '',
+      price: product.price?.toString() || '',
+      gender: product.gender || 'Men',
+      color: product.color || '',
+      fabric: product.fabric || '',
+      origin: product.origin || '',
+      story: product.story || '',
+      images: Array.isArray(product.images) ? product.images.join(', ') : '',
+      stock: product.stock?.toString() || '',
+      stockS: stockBySize?.S?.toString() || '',
+      stockM: stockBySize?.M?.toString() || '',
+      stockL: stockBySize?.L?.toString() || '',
+      stockXL: stockBySize?.XL?.toString() || '',
+    })
+    // Set image previews from existing images
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      setImagePreviews(product.images)
+    } else {
+      setImagePreviews([])
+    }
+    setProductImages([]) // Clear uploaded files
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null)
+    setFormData({
+      name: '',
+      price: '',
+      gender: 'Men',
+      color: '',
+      fabric: '',
+      origin: '',
+      story: '',
+      images: '',
+      stock: '',
+      stockS: '',
+      stockM: '',
+      stockL: '',
+      stockXL: '',
+    })
+    setProductImages([])
+    setImagePreviews([])
+    imagePreviews.forEach(url => URL.revokeObjectURL(url))
   }
 
   const handleDelete = async (id: number) => {
@@ -863,7 +965,19 @@ export default function AdminDashboard() {
           <>
             {/* Add Product Form */}
             <div className="bg-gray-900 p-6 rounded-xl mb-8">
-          <h2 className="text-2xl font-serif text-gold mb-4">Add New Product</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-serif text-gold">
+              {editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Product'}
+            </h2>
+            {editingProduct && (
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 border border-gold text-gold rounded-lg hover:bg-gold hover:text-black transition-all"
+              >
+                Cancel Edit
+              </button>
+            )}
+          </div>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
@@ -1199,13 +1313,22 @@ export default function AdminDashboard() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="text-red-400 hover:text-red-300 p-2"
-                        title="Delete"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="text-gold hover:text-gold-light p-2"
+                          title="Edit"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="text-red-400 hover:text-red-300 p-2"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
