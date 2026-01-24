@@ -535,7 +535,16 @@ export default function CustomRequestPage() {
               </Link>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || submitted}
+                onClick={(e) => {
+                  // Extra safeguard - ensure this is a real user click
+                  if (e.detail === 0) {
+                    console.warn('Programmatic click detected, preventing submission')
+                    e.preventDefault()
+                    e.stopPropagation()
+                    return false
+                  }
+                }}
                 className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
