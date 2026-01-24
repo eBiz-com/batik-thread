@@ -170,6 +170,7 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
+                unoptimized={product.images[currentImageIndex]?.startsWith('data:image')}
               />
             )}
             {product.images.length > 1 && (

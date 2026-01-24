@@ -19,7 +19,7 @@ export default function ProductGrid({ products, onProductClick }: ProductGridPro
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4 pb-12">
-      {products.map((product) => (
+      {products.map((product, index) => (
         <div
           key={product.id}
           className="bg-gray-900 rounded-xl overflow-hidden shadow-lg hover:scale-105 hover:shadow-gold/30 transition-all cursor-pointer group"
@@ -33,6 +33,9 @@ export default function ProductGrid({ products, onProductClick }: ProductGridPro
                 fill
                 className="object-contain group-hover:scale-105 transition-transform duration-300"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                loading={index < 8 ? "eager" : "lazy"}
+                priority={index < 4}
+                unoptimized={product.images[0]?.startsWith('data:image')}
               />
             ) : (
               <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-500">
