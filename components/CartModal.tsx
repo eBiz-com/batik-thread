@@ -88,21 +88,38 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
           return
         }
         
-        console.log('💾 Preparing checkout items:', checkoutItems)
+        console.log('💾 Storing checkout items in sessionStorage BEFORE redirect:', checkoutItems)
         
-        // The checkout API should already include items in the URL
-        // But we'll also store in sessionStorage as backup
+        // CRITICAL: Store in sessionStorage BEFORE redirect to ensure it's available
+        // Store in multiple places for redundancy
         try {
           sessionStorage.setItem('checkout_items', JSON.stringify(checkoutItems))
           sessionStorage.setItem('cart_backup', JSON.stringify(cart))
           sessionStorage.setItem('cart', JSON.stringify(cart))
-          console.log('✅ Items stored in sessionStorage as backup')
+          
+          // Verify storage immediately
+          const verify = sessionStorage.getItem('checkout_items')
+          if (!verify) {
+            console.error('❌ CRITICAL: Failed to store items in sessionStorage!')
+            alert('Error: Could not save cart data. Please check browser settings and try again.')
+            setLoading(false)
+            return
+          }
+          
+          console.log('✅ Items stored and verified in sessionStorage')
+          console.log('📋 SessionStorage keys:', Object.keys(sessionStorage))
+          
+          // Small delay to ensure storage is committed
+          await new Promise(resolve => setTimeout(resolve, 100))
         } catch (e) {
-          console.warn('⚠️ Could not store in sessionStorage (will use URL params):', e)
+          console.error('❌ CRITICAL: Error storing in sessionStorage:', e)
+          alert('Error: Could not save cart data. Please check browser settings and try again.')
+          setLoading(false)
+          return
         }
         
-        // Redirect to payment page (items should already be in URL from API)
-        console.log('🔄 Redirecting to payment page with items in URL...')
+        // Redirect to payment page
+        console.log('🔄 Redirecting to payment page...')
         window.location.href = data.url
       } else {
         throw new Error('No checkout URL received')

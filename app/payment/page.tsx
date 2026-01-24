@@ -14,18 +14,58 @@ function PaymentContent() {
   const shipping = parseFloat(searchParams.get('shipping') || '0')
   const total = parseFloat(searchParams.get('total') || (subtotal + tax + shipping).toString())
   
-  // Debug: Log all URL parameters on mount
+  // Check for items availability on page load
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const currentUrl = window.location.href
       const urlParams = new URLSearchParams(window.location.search)
+      const sessionId = urlParams.get('session_id')
+      
       console.log('🔍 Payment page loaded:', {
-        fullUrl: currentUrl.substring(0, 200), // First 200 chars
+        fullUrl: currentUrl.substring(0, 200),
         allParams: Object.fromEntries(urlParams.entries()),
-        hasItemsParam: urlParams.has('items'),
-        itemsParamLength: urlParams.get('items')?.length || 0,
-        itemsParamPreview: urlParams.get('items')?.substring(0, 100) || 'none'
+        sessionId: sessionId,
+        hasSessionId: !!sessionId
       })
+      
+      // Pre-check if items are available (for better UX)
+      const checkItemsAvailable = async () => {
+        let hasItems = false
+        
+        // Check database first
+        if (sessionId) {
+          try {
+            const response = await fetch(`/api/checkout/session?session_id=${sessionId}`)
+            if (response.ok) {
+              const data = await response.json()
+              if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+                hasItems = true
+                console.log('✅ Items available in database')
+              }
+            }
+          } catch (e) {
+            // Ignore - will check sessionStorage
+          }
+        }
+        
+        // Check sessionStorage
+        if (!hasItems) {
+          const storedItems = sessionStorage.getItem('checkout_items')
+          const cartBackup = sessionStorage.getItem('cart_backup')
+          const cartData = sessionStorage.getItem('cart')
+          
+          if (storedItems || cartBackup || cartData) {
+            hasItems = true
+            console.log('✅ Items available in sessionStorage')
+          }
+        }
+        
+        if (!hasItems) {
+          console.warn('⚠️ WARNING: No items found on page load. User may need to go back to cart.')
+        }
+      }
+      
+      checkItemsAvailable()
     }
   }, [])
   

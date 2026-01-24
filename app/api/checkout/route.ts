@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     
     // Store items in database to avoid URL length limits (414 error)
     // Items will be fetched by session_id on the payment page
+    // If table doesn't exist, sessionStorage will be used as fallback
     try {
       const { error: dbError } = await supabase
         .from('checkout_sessions')
@@ -78,15 +79,25 @@ export async function POST(request: NextRequest) {
         })
 
       if (dbError) {
-        console.error('Error storing checkout session:', dbError)
-        // If table doesn't exist, fall back to sessionStorage method
-        console.warn('⚠️ Checkout sessions table may not exist. Please run CREATE_CHECKOUT_SESSIONS_TABLE.sql')
+        // Check if it's a "table doesn't exist" error
+        if (dbError.code === 'PGRST116' || dbError.message?.includes('does not exist') || dbError.message?.includes('relation') || dbError.message?.includes('table')) {
+          console.warn('⚠️ Checkout sessions table does not exist. Using sessionStorage fallback.')
+          console.warn('💡 To enable database storage, run CREATE_CHECKOUT_SESSIONS_TABLE.sql in Supabase SQL Editor')
+        } else {
+          console.error('Error storing checkout session:', dbError)
+        }
+        // Continue - sessionStorage will be used as fallback
       } else {
         console.log('✅ Checkout session stored in database:', sessionId)
       }
-    } catch (dbErr) {
-      console.error('Error inserting checkout session:', dbErr)
-      // Continue anyway - we'll try to use sessionStorage as fallback
+    } catch (dbErr: any) {
+      // If table doesn't exist or any other error, continue with sessionStorage fallback
+      if (dbErr?.code === 'PGRST116' || dbErr?.message?.includes('does not exist') || dbErr?.message?.includes('relation')) {
+        console.warn('⚠️ Checkout sessions table does not exist. Using sessionStorage fallback.')
+      } else {
+        console.error('Error inserting checkout session:', dbErr)
+      }
+      // Continue anyway - sessionStorage will be used as fallback
     }
     
     // Simulate API delay
