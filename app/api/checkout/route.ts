@@ -66,15 +66,30 @@ export async function POST(request: NextRequest) {
     await new Promise(resolve => setTimeout(resolve, 500))
 
     // Return demo payment URL with breakdown
+    // Include items in URL as primary method (sessionStorage can be unreliable)
     const origin = request.headers.get('origin') || 'http://localhost:3000'
-    const params = new URLSearchParams({
+    
+    // Build URL with items encoded properly
+    const baseParams = new URLSearchParams({
       session_id: sessionId,
       subtotal: (subtotal || total || 0).toString(),
       tax: (tax || 0).toString(),
       shipping: (shipping || 0).toString(),
       total: (total || subtotal || 0).toString(),
     })
-    const paymentUrl = `${origin}/payment?${params.toString()}`
+    
+    // Encode items in URL (primary method - more reliable than sessionStorage)
+    // Use encodeURIComponent to properly encode the JSON string
+    try {
+      const itemsJson = JSON.stringify(items)
+      const encodedItems = encodeURIComponent(itemsJson)
+      baseParams.append('items', encodedItems)
+      console.log('✅ Items encoded in URL, length:', encodedItems.length)
+    } catch (e) {
+      console.error('❌ Error encoding items in URL:', e)
+    }
+    
+    const paymentUrl = `${origin}/payment?${baseParams.toString()}`
 
     return NextResponse.json({ 
       sessionId,

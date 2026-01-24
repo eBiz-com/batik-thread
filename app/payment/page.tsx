@@ -189,10 +189,26 @@ function PaymentContent() {
       // Try URL parameters first (most reliable)
       if (urlItems) {
         try {
-          items = JSON.parse(decodeURIComponent(urlItems))
-          console.log('✅ Parsed items from URL parameters:', items)
+          // Items might be double-encoded, so try decoding twice if needed
+          let decoded = urlItems
+          try {
+            decoded = decodeURIComponent(urlItems)
+            // If it's still a JSON string (not an object), it might need another decode
+            if (decoded.startsWith('"') || decoded.startsWith('{')) {
+              items = JSON.parse(decoded)
+            } else {
+              // Try one more decode
+              decoded = decodeURIComponent(decoded)
+              items = JSON.parse(decoded)
+            }
+          } catch (decodeError) {
+            // If decode fails, try parsing directly
+            items = JSON.parse(urlItems)
+          }
+          console.log('✅ Parsed items from URL parameters:', items.length, 'items')
         } catch (e) {
           console.error('❌ Error parsing items from URL:', e)
+          console.error('Raw URL items value:', urlItems?.substring(0, 100))
         }
       }
       

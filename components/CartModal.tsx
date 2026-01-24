@@ -88,58 +88,21 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
           return
         }
         
-        console.log('💾 Storing checkout items in sessionStorage:', checkoutItems)
+        console.log('💾 Preparing checkout items:', checkoutItems)
         
-        // Store items in sessionStorage for receipt generation AND stock reduction
+        // The checkout API should already include items in the URL
+        // But we'll also store in sessionStorage as backup
         try {
-          // Store in multiple places for redundancy
           sessionStorage.setItem('checkout_items', JSON.stringify(checkoutItems))
           sessionStorage.setItem('cart_backup', JSON.stringify(cart))
-          sessionStorage.setItem('cart', JSON.stringify(cart)) // Update main cart too
-          
-          console.log('✅ Items stored in sessionStorage')
-          console.log('📋 Stored keys:', Object.keys(sessionStorage))
-          
-          // Verify it was stored
-          const verify = sessionStorage.getItem('checkout_items')
-          if (!verify) {
-            console.error('❌ Failed to store items in sessionStorage!')
-            // Try encoding in URL as backup
-            const encodedItems = encodeURIComponent(JSON.stringify(checkoutItems))
-            const urlWithItems = `${data.url}&items=${encodedItems}`
-            console.log('🔄 Using URL fallback for items')
-            window.location.href = urlWithItems
-            return
-          }
-          
-          const verifyCart = sessionStorage.getItem('cart')
-          console.log('✅ Verified items in sessionStorage:', {
-            checkoutItems: !!verify,
-            cart: !!verifyCart,
-            cartLength: verifyCart ? JSON.parse(verifyCart).length : 0
-          })
+          sessionStorage.setItem('cart', JSON.stringify(cart))
+          console.log('✅ Items stored in sessionStorage as backup')
         } catch (e) {
-          console.error('❌ Error storing in sessionStorage:', e)
-          // Try encoding in URL as backup
-          try {
-            const encodedItems = encodeURIComponent(JSON.stringify(checkoutItems))
-            const urlWithItems = `${data.url}&items=${encodedItems}`
-            console.log('🔄 Using URL fallback for items due to storage error')
-            window.location.href = urlWithItems
-            return
-          } catch (urlError) {
-            console.error('❌ Failed to encode items in URL:', urlError)
-            alert('Error: Could not save items. Please check browser settings and try again.')
-            setLoading(false)
-            return
-          }
+          console.warn('⚠️ Could not store in sessionStorage (will use URL params):', e)
         }
         
-        // Small delay to ensure sessionStorage is written
-        await new Promise(resolve => setTimeout(resolve, 200))
-        
-        // Redirect to demo payment page
-        console.log('🔄 Redirecting to payment page...')
+        // Redirect to payment page (items should already be in URL from API)
+        console.log('🔄 Redirecting to payment page with items in URL...')
         window.location.href = data.url
       } else {
         throw new Error('No checkout URL received')
