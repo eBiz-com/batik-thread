@@ -183,116 +183,86 @@ function PaymentContent() {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 2000))
 
-      // Get items from multiple sources (sessionStorage, URL params)
-      const storedItems = typeof window !== 'undefined' ? sessionStorage.getItem('checkout_items') : null
-      const cartBackup = typeof window !== 'undefined' ? sessionStorage.getItem('cart_backup') : null
-      const cartData = typeof window !== 'undefined' ? sessionStorage.getItem('cart') : null
-      
-      // Also check URL parameters as backup
-      const urlItems = searchParams.get('items')
-      
-      // Also try reading directly from window.location as fallback
-      let urlItemsDirect: string | null = null
-      if (typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search)
-        urlItemsDirect = urlParams.get('items')
-      }
-      
-      console.log('📦 Checking for items:', {
-        hasCheckoutItems: !!storedItems,
-        hasCartBackup: !!cartBackup,
-        hasCart: !!cartData,
-        hasUrlItems: !!urlItems,
-        hasUrlItemsDirect: !!urlItemsDirect,
-        urlItemsLength: urlItems?.length || 0,
-        urlItemsDirectLength: urlItemsDirect?.length || 0,
-        allKeys: typeof window !== 'undefined' ? Object.keys(sessionStorage) : [],
-        currentUrl: typeof window !== 'undefined' ? window.location.href.substring(0, 300) : 'N/A'
-      })
-      
+      // Get items from database first (using session_id) - avoids URL length limits
       let items: any[] = []
       
-      // Try URL parameters first (most reliable)
-      // Try both searchParams.get and direct URL parsing
-      const itemsParam = urlItems || urlItemsDirect
-      if (itemsParam) {
+      if (sessionId) {
         try {
-          console.log('🔍 Attempting to parse items from URL, length:', itemsParam.length)
-          // Items might be double-encoded, so try decoding
-          let decoded = itemsParam
-          try {
-            decoded = decodeURIComponent(itemsParam)
-            console.log('🔍 After first decode, length:', decoded.length, 'starts with:', decoded.substring(0, 50))
-            // Try parsing
-            items = JSON.parse(decoded)
-            console.log('✅ Parsed items from URL parameters (first decode):', items.length, 'items')
-          } catch (firstError) {
-            console.log('⚠️ First decode/parse failed, trying second decode...')
-            try {
-              // Try one more decode
-              decoded = decodeURIComponent(decoded)
-              items = JSON.parse(decoded)
-              console.log('✅ Parsed items from URL parameters (second decode):', items.length, 'items')
-            } catch (secondError) {
-              // If decode fails, try parsing directly
-              console.log('⚠️ Second decode failed, trying direct parse...')
-              items = JSON.parse(itemsParam)
-              console.log('✅ Parsed items from URL parameters (direct):', items.length, 'items')
+          console.log('🔍 Fetching items from database for session:', sessionId)
+          const response = await fetch(`/api/checkout/session?session_id=${sessionId}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.items && Array.isArray(data.items)) {
+              items = data.items
+              console.log('✅ Fetched items from database:', items.length, 'items')
             }
+          } else {
+            console.warn('⚠️ Could not fetch session from database:', response.status)
           }
-        } catch (e) {
-          console.error('❌ Error parsing items from URL:', e)
-          console.error('Raw URL items value (first 200 chars):', itemsParam.substring(0, 200))
-        }
-      } else {
-        console.warn('⚠️ No items parameter found in URL at all')
-      }
-      
-      // Try checkout_items from sessionStorage
-      if (items.length === 0 && storedItems) {
-        try {
-          items = JSON.parse(storedItems)
-          console.log('✅ Parsed checkout_items from sessionStorage:', items)
-        } catch (e) {
-          console.error('❌ Error parsing checkout_items:', e)
+        } catch (dbError) {
+          console.warn('⚠️ Error fetching from database, trying fallbacks:', dbError)
         }
       }
       
-      // Fallback to cart_backup
-      if (items.length === 0 && cartBackup) {
-        try {
-          const cart = JSON.parse(cartBackup)
-          console.log('📦 Found cart_backup, converting to items:', cart)
-          items = cart.map((item: any) => ({
-            id: item.product?.id || item.id,
-            name: item.product?.name || item.name,
-            description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
-            price: item.product?.price || item.price,
-            quantity: item.quantity || 1,
-            size: item.size || 'M',
-          })).filter((item: any) => item.id) // Only keep items with IDs
-          console.log('✅ Converted cart_backup to items:', items)
-        } catch (e) {
-          console.error('❌ Error parsing cart_backup:', e)
+      // Fallback to sessionStorage if database fetch failed
+      if (items.length === 0) {
+        const storedItems = typeof window !== 'undefined' ? sessionStorage.getItem('checkout_items') : null
+        const cartBackup = typeof window !== 'undefined' ? sessionStorage.getItem('cart_backup') : null
+        const cartData = typeof window !== 'undefined' ? sessionStorage.getItem('cart') : null
+        
+        console.log('📦 Checking sessionStorage fallbacks:', {
+          hasCheckoutItems: !!storedItems,
+          hasCartBackup: !!cartBackup,
+          hasCart: !!cartData,
+          allKeys: typeof window !== 'undefined' ? Object.keys(sessionStorage) : []
+        })
+        
+        // Try checkout_items from sessionStorage
+        if (storedItems) {
+          try {
+            items = JSON.parse(storedItems)
+            console.log('✅ Parsed checkout_items from sessionStorage:', items.length, 'items')
+          } catch (e) {
+            console.error('❌ Error parsing checkout_items:', e)
+          }
         }
-      }
-      
-      // Last fallback to cart
-      if (items.length === 0 && cartData) {
-        try {
-          const cart = JSON.parse(cartData)
-          console.log('📦 Found cart, converting to items:', cart)
-          items = cart.map((item: any) => ({
-            id: item.product?.id || item.id,
-            name: item.product?.name || item.name,
-            description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
-            price: item.product?.price || item.price,
-            quantity: item.quantity || 1,
-            size: item.size || 'M',
-          })).filter((item: any) => item.id) // Only keep items with IDs
-          console.log('✅ Converted cart to items:', items)
-        } catch (e) {
-          console.error('❌ Error parsing cart:', e)
+        
+        // Fallback to cart_backup
+        if (items.length === 0 && cartBackup) {
+          try {
+            const cart = JSON.parse(cartBackup)
+            console.log('📦 Found cart_backup, converting to items:', cart)
+            items = cart.map((item: any) => ({
+              id: item.product?.id || item.id,
+              name: item.product?.name || item.name,
+              description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
+              price: item.product?.price || item.price,
+              quantity: item.quantity || 1,
+              size: item.size || 'M',
+            })).filter((item: any) => item.id) // Only keep items with IDs
+            console.log('✅ Converted cart_backup to items:', items.length, 'items')
+          } catch (e) {
+            console.error('❌ Error parsing cart_backup:', e)
+          }
+        }
+        
+        // Last fallback to cart
+        if (items.length === 0 && cartData) {
+          try {
+            const cart = JSON.parse(cartData)
+            console.log('📦 Found cart, converting to items:', cart)
+            items = cart.map((item: any) => ({
+              id: item.product?.id || item.id,
+              name: item.product?.name || item.name,
+              description: `${item.product?.name || item.name} (Size: ${item.size || 'M'})`,
+              price: item.product?.price || item.price,
+              quantity: item.quantity || 1,
+              size: item.size || 'M',
+            })).filter((item: any) => item.id) // Only keep items with IDs
+            console.log('✅ Converted cart to items:', items.length, 'items')
+          } catch (e) {
+            console.error('❌ Error parsing cart:', e)
+          }
         }
       }
       

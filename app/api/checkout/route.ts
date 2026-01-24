@@ -62,14 +62,38 @@ export async function POST(request: NextRequest) {
     // Generate a demo session ID
     const sessionId = `demo_${Date.now()}_${Math.random().toString(36).substring(7)}`
     
+    // Store items in database to avoid URL length limits (414 error)
+    // Items will be fetched by session_id on the payment page
+    try {
+      const { error: dbError } = await supabase
+        .from('checkout_sessions')
+        .insert({
+          session_id: sessionId,
+          items: items,
+          subtotal: subtotal || total || 0,
+          tax: tax || 0,
+          shipping: shipping || 0,
+          total: total || subtotal || 0,
+          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour expiry
+        })
+
+      if (dbError) {
+        console.error('Error storing checkout session:', dbError)
+        // If table doesn't exist, fall back to sessionStorage method
+        console.warn('⚠️ Checkout sessions table may not exist. Please run CREATE_CHECKOUT_SESSIONS_TABLE.sql')
+      } else {
+        console.log('✅ Checkout session stored in database:', sessionId)
+      }
+    } catch (dbErr) {
+      console.error('Error inserting checkout session:', dbErr)
+      // Continue anyway - we'll try to use sessionStorage as fallback
+    }
+    
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    // Return demo payment URL with breakdown
-    // Include items in URL as primary method (sessionStorage can be unreliable)
+    // Return demo payment URL with breakdown (no items in URL - fetched from DB)
     const origin = request.headers.get('origin') || 'http://localhost:3000'
-    
-    // Build URL with items encoded properly
     const baseParams = new URLSearchParams({
       session_id: sessionId,
       subtotal: (subtotal || total || 0).toString(),
@@ -77,17 +101,6 @@ export async function POST(request: NextRequest) {
       shipping: (shipping || 0).toString(),
       total: (total || subtotal || 0).toString(),
     })
-    
-    // Encode items in URL (primary method - more reliable than sessionStorage)
-    // URLSearchParams will automatically encode, so don't pre-encode
-    try {
-      const itemsJson = JSON.stringify(items)
-      baseParams.append('items', itemsJson) // URLSearchParams handles encoding
-      console.log('✅ Items added to URL params, JSON length:', itemsJson.length)
-      console.log('📋 Items preview:', itemsJson.substring(0, 200))
-    } catch (e) {
-      console.error('❌ Error encoding items in URL:', e)
-    }
     
     const paymentUrl = `${origin}/payment?${baseParams.toString()}`
 
