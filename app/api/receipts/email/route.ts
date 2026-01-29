@@ -230,60 +230,115 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Production Mode - Send actual email via Mailgun or Gmail SMTP
-    let transporter
-    let fromEmail
+    // Production Mode - Send actual email via Mailgun REST API, Mailgun SMTP, or Gmail SMTP
+    if (USE_MAILGUN_REST) {
+      // Use Mailgun REST API (preferred - most reliable, especially for sandbox domains)
+      console.log('Using Mailgun REST API for email delivery')
+      
+      const mailgunUrl = `${MAILGUN_BASE_URL}/v3/${MAILGUN_DOMAIN}/messages`
+      
+      const formData = new URLSearchParams()
+      formData.append('from', `"Batik & Thread" <${MAILGUN_FROM_EMAIL}>`)
+      formData.append('to', email)
+      formData.append('subject', subject)
+      formData.append('html', emailHtml)
 
-    if (USE_MAILGUN) {
-      // Use Mailgun (preferred - better deliverability and reliability)
-      transporter = nodemailer.createTransport({
+      const response = await fetch(mailgunUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`api:${MAILGUN_API_KEY}`).toString('base64')}`,
+        },
+        body: formData,
+      })
+
+      const responseData = await response.json()
+
+      if (!response.ok) {
+        console.error('Mailgun API error:', responseData)
+        throw new Error(responseData.message || `Mailgun API error: ${response.statusText}`)
+      }
+
+      console.log('Email sent successfully via Mailgun REST API:', {
+        to: email,
+        subject: subject,
+        messageId: responseData.id,
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Receipt email sent successfully',
+        messageId: responseData.id,
+      })
+    } else if (USE_MAILGUN_SMTP) {
+      // Fallback to Mailgun SMTP (if REST API not configured)
+      console.log('Using Mailgun SMTP for email delivery')
+      
+      const transporter = nodemailer.createTransport({
         host: 'smtp.mailgun.org',
         port: 587,
-        secure: false, // true for 465, false for other ports
+        secure: false,
         auth: {
           user: 'api',
           pass: MAILGUN_API_KEY,
         },
       })
-      fromEmail = MAILGUN_FROM_EMAIL
-      console.log('Using Mailgun for email delivery')
+
+      const mailOptions = {
+        from: `"Batik & Thread" <${MAILGUN_FROM_EMAIL}>`,
+        to: email,
+        subject: subject,
+        html: emailHtml,
+      }
+
+      const info = await transporter.sendMail(mailOptions)
+
+      console.log('Email sent successfully via Mailgun SMTP:', {
+        to: email,
+        subject: subject,
+        messageId: info.messageId,
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Receipt email sent successfully',
+        messageId: info.messageId,
+      })
     } else if (USE_GMAIL) {
       // Fallback to Gmail SMTP
-      transporter = nodemailer.createTransport({
+      console.log('Using Gmail SMTP for email delivery')
+      
+      const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
           user: GMAIL_USER,
           pass: GMAIL_PASS,
         },
       })
-      fromEmail = GMAIL_USER
-      console.log('Using Gmail SMTP for email delivery')
+
+      const mailOptions = {
+        from: `"Batik & Thread" <${GMAIL_USER}>`,
+        to: email,
+        subject: subject,
+        html: emailHtml,
+      }
+
+      const info = await transporter.sendMail(mailOptions)
+
+      console.log('Email sent successfully via Gmail SMTP:', {
+        to: email,
+        subject: subject,
+        messageId: info.messageId,
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Receipt email sent successfully',
+        messageId: info.messageId,
+      })
     } else {
       // This shouldn't happen due to DEMO_MODE check, but just in case
       throw new Error('No email service configured')
     }
-
-    // Send email
-    const mailOptions = {
-      from: `"Batik & Thread" <${fromEmail}>`,
-      to: email,
-      subject: subject,
-      html: emailHtml,
-    }
-
-    const info = await transporter.sendMail(mailOptions)
-
-    console.log('Email sent successfully:', {
-      to: email,
-      subject: subject,
-      messageId: info.messageId,
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: 'Receipt email sent successfully',
-      messageId: info.messageId,
-    })
   } catch (error: any) {
     console.error('Error sending email:', error)
     return NextResponse.json(
