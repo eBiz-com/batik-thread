@@ -26,18 +26,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Email service configuration (priority: Mailgun > Gmail > Demo Mode)
+    // Email service configuration (priority: Mailgun REST API > Mailgun SMTP > Gmail > Demo Mode)
     const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || ''
     const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || ''
+    const MAILGUN_BASE_URL = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net'
     const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || `postmaster@${MAILGUN_DOMAIN}`
     
     const GMAIL_USER = process.env.GMAIL_USER || 'ddicservicellc@gmail.com'
     const GMAIL_PASS = process.env.GMAIL_PASS || ''
     
     // Determine which service to use
-    const USE_MAILGUN = MAILGUN_API_KEY && MAILGUN_DOMAIN
-    const USE_GMAIL = !USE_MAILGUN && GMAIL_PASS
-    const DEMO_MODE = process.env.EMAIL_DEMO_MODE === 'true' || (!USE_MAILGUN && !USE_GMAIL)
+    const USE_MAILGUN_REST = MAILGUN_API_KEY && MAILGUN_DOMAIN && MAILGUN_BASE_URL
+    const USE_MAILGUN_SMTP = MAILGUN_API_KEY && MAILGUN_DOMAIN && !USE_MAILGUN_REST
+    const USE_GMAIL = !USE_MAILGUN_REST && !USE_MAILGUN_SMTP && GMAIL_PASS
+    const DEMO_MODE = process.env.EMAIL_DEMO_MODE === 'true' || (!USE_MAILGUN_REST && !USE_MAILGUN_SMTP && !USE_GMAIL)
 
     // Generate HTML email content with watermark (used in both demo and production)
     const itemsHtml = receiptData.items.map((item: any) => `
