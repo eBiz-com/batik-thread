@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import Stripe from 'stripe'
 
 // ============================================
-// DEMO PAYMENT API - Simulates payment processing
-// To switch to Stripe later, replace this file with Stripe integration
+// STRIPE CHECKOUT API
+// Creates Stripe Checkout sessions with stock validation
 // ============================================
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-11-20.acacia',
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +17,14 @@ export async function POST(request: NextRequest) {
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 })
+    }
+
+    // Check if Stripe is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json(
+        { error: 'Stripe is not configured. Please add STRIPE_SECRET_KEY to environment variables.' },
+        { status: 500 }
+      )
     }
 
     // Validate stock availability before checkout
@@ -59,69 +72,85 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate a demo session ID
-    const sessionId = `demo_${Date.now()}_${Math.random().toString(36).substring(7)}`
-    
-    // Store items in database to avoid URL length limits (414 error)
-    // Items will be fetched by session_id on the payment page
-    // If table doesn't exist, sessionStorage will be used as fallback
+    const origin = request.headers.get('origin') || 'http://localhost:3000'
+
+    // Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: items.map((item: any) => ({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: item.name || 'Product',
+            description: item.story || `${item.fabric || ''} ${item.origin || ''}`.trim() || `Size: ${item.size || 'M'}`,
+            images: item.images && item.images.length > 0 ? [item.images[0]] : [],
+          },
+          unit_amount: Math.round((item.price || 0) * 100), // Convert to cents
+        },
+        quantity: item.quantity || 1,
+      })),
+      mode: 'payment',
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cart?canceled=true`,
+      // Add tax and shipping as line items if needed, or use automatic_tax
+      shipping_address_collection: {
+        allowed_countries: ['US'],
+      },
+      metadata: {
+        subtotal: (subtotal || total || 0).toString(),
+        tax: (tax || 0).toString(),
+        shipping: (shipping || 0).toString(),
+        total: (total || subtotal || 0).toString(),
+        item_count: items.length.toString(),
+      },
+      // Store custom data for webhook processing
+      payment_intent_data: {
+        metadata: {
+          items: JSON.stringify(items),
+        },
+      },
+    })
+
+    // Store checkout session data in database for webhook processing
     try {
       const { error: dbError } = await supabase
         .from('checkout_sessions')
         .insert({
-          session_id: sessionId,
+          session_id: session.id,
           items: items,
           subtotal: subtotal || total || 0,
           tax: tax || 0,
           shipping: shipping || 0,
           total: total || subtotal || 0,
-          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour expiry
+          expires_at: new Date(session.expires_at * 1000).toISOString(), // Stripe expiry timestamp
         })
 
       if (dbError) {
-        // Check if it's a "table doesn't exist" error
-        if (dbError.code === 'PGRST116' || dbError.message?.includes('does not exist') || dbError.message?.includes('relation') || dbError.message?.includes('table')) {
-          console.warn('⚠️ Checkout sessions table does not exist. Using sessionStorage fallback.')
-          console.warn('💡 To enable database storage, run CREATE_CHECKOUT_SESSIONS_TABLE.sql in Supabase SQL Editor')
-        } else {
-          console.error('Error storing checkout session:', dbError)
-        }
-        // Continue - sessionStorage will be used as fallback
+        console.error('Error storing checkout session in database:', dbError)
+        // Continue anyway - webhook can still process payment
       } else {
-        console.log('✅ Checkout session stored in database:', sessionId)
+        console.log('✅ Checkout session stored in database:', session.id)
       }
     } catch (dbErr: any) {
-      // If table doesn't exist or any other error, continue with sessionStorage fallback
-      if (dbErr?.code === 'PGRST116' || dbErr?.message?.includes('does not exist') || dbErr?.message?.includes('relation')) {
-        console.warn('⚠️ Checkout sessions table does not exist. Using sessionStorage fallback.')
-      } else {
-        console.error('Error inserting checkout session:', dbErr)
-      }
-      // Continue anyway - sessionStorage will be used as fallback
+      console.error('Error inserting checkout session:', dbErr)
+      // Continue anyway
     }
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Return demo payment URL with breakdown (no items in URL - fetched from DB)
-    const origin = request.headers.get('origin') || 'http://localhost:3000'
-    const baseParams = new URLSearchParams({
-      session_id: sessionId,
-      subtotal: (subtotal || total || 0).toString(),
-      tax: (tax || 0).toString(),
-      shipping: (shipping || 0).toString(),
-      total: (total || subtotal || 0).toString(),
-    })
-    
-    const paymentUrl = `${origin}/payment?${baseParams.toString()}`
 
     return NextResponse.json({ 
-      sessionId,
-      url: paymentUrl,
-      demo: true // Flag to indicate this is a demo payment
+      sessionId: session.id,
+      url: session.url,
     })
   } catch (error: any) {
-    console.error('Error creating checkout session:', error)
+    console.error('Error creating Stripe checkout session:', error)
+    
+    // Handle Stripe-specific errors
+    if (error.type === 'StripeInvalidRequestError') {
+      return NextResponse.json(
+        { error: `Stripe error: ${error.message}` },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Failed to create checkout session' },
       { status: 500 }

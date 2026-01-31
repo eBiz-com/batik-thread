@@ -234,6 +234,13 @@ export async function POST(request: NextRequest) {
     if (USE_MAILGUN_REST) {
       // Use Mailgun REST API (preferred - most reliable, especially for sandbox domains)
       console.log('Using Mailgun REST API for email delivery')
+      console.log('Mailgun config:', {
+        domain: MAILGUN_DOMAIN,
+        baseUrl: MAILGUN_BASE_URL,
+        fromEmail: MAILGUN_FROM_EMAIL,
+        apiKeyPresent: !!MAILGUN_API_KEY,
+        apiKeyLength: MAILGUN_API_KEY?.length || 0,
+      })
       
       const mailgunUrl = `${MAILGUN_BASE_URL}/v3/${MAILGUN_DOMAIN}/messages`
       
@@ -243,32 +250,76 @@ export async function POST(request: NextRequest) {
       formData.append('subject', subject)
       formData.append('html', emailHtml)
 
-      const response = await fetch(mailgunUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${Buffer.from(`api:${MAILGUN_API_KEY}`).toString('base64')}`,
-        },
-        body: formData,
-      })
+      try {
+        const response = await fetch(mailgunUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`api:${MAILGUN_API_KEY}`).toString('base64')}`,
+          },
+          body: formData,
+        })
 
-      const responseData = await response.json()
+        // Check response status before trying to parse JSON
+        const contentType = response.headers.get('content-type')
+        let responseData: any = {}
 
-      if (!response.ok) {
-        console.error('Mailgun API error:', responseData)
-        throw new Error(responseData.message || `Mailgun API error: ${response.statusText}`)
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            responseData = await response.json()
+          } catch (jsonError) {
+            // If JSON parsing fails, get text response
+            const textResponse = await response.text()
+            console.error('Failed to parse JSON response:', textResponse)
+            throw new Error(`Mailgun API returned invalid JSON: ${textResponse}`)
+          }
+        } else {
+          // Non-JSON response (likely an error)
+          const textResponse = await response.text()
+          console.error('Mailgun API returned non-JSON response:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: textResponse,
+          })
+          
+          if (!response.ok) {
+            throw new Error(`Mailgun API error (${response.status}): ${textResponse || response.statusText}`)
+          }
+        }
+
+        if (!response.ok) {
+          console.error('Mailgun API error:', {
+            status: response.status,
+            statusText: response.statusText,
+            data: responseData,
+          })
+          
+          // Provide helpful error messages based on status code
+          let errorMessage = responseData.message || `Mailgun API error: ${response.statusText}`
+          
+          if (response.status === 401 || response.status === 403) {
+            errorMessage = 'Mailgun authentication failed. Please check your API key and domain configuration.'
+          } else if (response.status === 400) {
+            errorMessage = responseData.message || 'Invalid request to Mailgun API. Check recipient email and domain settings.'
+          }
+          
+          throw new Error(errorMessage)
+        }
+
+        console.log('Email sent successfully via Mailgun REST API:', {
+          to: email,
+          subject: subject,
+          messageId: responseData.id,
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'Receipt email sent successfully',
+          messageId: responseData.id,
+        })
+      } catch (error: any) {
+        console.error('Mailgun API request failed:', error)
+        throw new Error(error.message || 'Failed to send email via Mailgun API')
       }
-
-      console.log('Email sent successfully via Mailgun REST API:', {
-        to: email,
-        subject: subject,
-        messageId: responseData.id,
-      })
-
-      return NextResponse.json({
-        success: true,
-        message: 'Receipt email sent successfully',
-        messageId: responseData.id,
-      })
     } else if (USE_MAILGUN_SMTP) {
       // Fallback to Mailgun SMTP (if REST API not configured)
       console.log('Using Mailgun SMTP for email delivery')

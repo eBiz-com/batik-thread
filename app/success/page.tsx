@@ -39,14 +39,55 @@ function SuccessContent() {
   const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
-    // Get receipt data from sessionStorage
-    if (typeof window !== 'undefined') {
+    const fetchReceiptData = async () => {
+      if (typeof window === 'undefined') return
+
+      // If we have a Stripe session_id, verify it and get receipt data
+      if (sessionId && sessionId.startsWith('cs_')) {
+        try {
+          const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.receipt) {
+              // Format receipt data for display
+              const formattedReceipt: ReceiptData = {
+                receiptNumber: data.receipt.receipt_number,
+                receiptId: data.receipt.id,
+                items: data.receipt.items || [],
+                customerInfo: {
+                  name: data.receipt.customer_name || 'Customer',
+                  phone: data.receipt.customer_phone,
+                  address: data.receipt.customer_address,
+                },
+                subtotal: data.receipt.subtotal || 0,
+                tax: data.receipt.tax || 0,
+                shipping: data.receipt.shipping || 0,
+                total: data.receipt.grand_total || 0,
+                date: data.receipt.receipt_date || new Date().toISOString().split('T')[0],
+              }
+              setReceiptData(formattedReceipt)
+              if (data.receipt.customer_email) {
+                setEmail(data.receipt.customer_email)
+              }
+              setLoading(false)
+              
+              // Clear cart and refresh products
+              sessionStorage.removeItem('cart')
+              window.dispatchEvent(new CustomEvent('refreshProducts'))
+              return
+            }
+          }
+        } catch (error) {
+          console.error('Error verifying Stripe session:', error)
+        }
+      }
+
+      // Fallback to sessionStorage (for demo payments)
       const stored = sessionStorage.getItem('receipt_data')
       if (stored) {
         try {
           const data = JSON.parse(stored)
           setReceiptData(data)
-          // Pre-fill email if customer info has email
           if (data.customerInfo?.email) {
             setEmail(data.customerInfo.email)
           }
@@ -54,18 +95,18 @@ function SuccessContent() {
           console.error('Error parsing receipt data:', e)
         }
       }
+      
       setLoading(false)
       
       // Clear cart and refresh products after successful purchase
       sessionStorage.removeItem('cart')
-      // Trigger a page refresh to update product stock
-      // This ensures users see updated stock levels
       if (window.location.pathname === '/success') {
-        // Dispatch custom event to refresh products on home page
         window.dispatchEvent(new CustomEvent('refreshProducts'))
       }
     }
-  }, [])
+
+    fetchReceiptData()
+  }, [sessionId])
 
   const handlePrint = () => {
     window.print()
