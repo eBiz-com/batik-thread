@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import Stripe from 'stripe'
 
 // ============================================
 // VERIFY STRIPE SESSION
 // Verifies a Stripe checkout session and returns receipt data
 // ============================================
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia',
-})
+// Dynamic import to ensure Stripe is only loaded server-side
+async function getStripe() {
+  const Stripe = (await import('stripe')).default
+  return new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    apiVersion: '2024-11-20.acacia',
+  })
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,6 +32,9 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Get Stripe instance
+    const stripe = await getStripe()
 
     // Verify session with Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId)

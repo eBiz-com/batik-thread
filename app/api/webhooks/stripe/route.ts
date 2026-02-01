@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import Stripe from 'stripe'
 
 // ============================================
 // STRIPE WEBHOOK HANDLER
 // Processes successful payments and reduces stock
 // ============================================
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia',
-})
-
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || ''
+
+// Dynamic import to ensure Stripe is only loaded server-side
+async function getStripe() {
+  const Stripe = (await import('stripe')).default
+  return new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    apiVersion: '2024-11-20.acacia',
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +29,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let event: Stripe.Event
+    const stripe = await getStripe()
+    let event: any
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
@@ -40,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Handle the event
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session
+      const session = event.data.object as any
       
       console.log('✅ Payment successful for session:', session.id)
 
@@ -153,7 +157,7 @@ async function processStockReduction(items: any[], sessionId: string) {
   }
 }
 
-async function createTransactionRecord(session: Stripe.Checkout.Session) {
+async function createTransactionRecord(session: any) {
   try {
     const amount = session.amount_total ? session.amount_total / 100 : 0 // Convert from cents
 
