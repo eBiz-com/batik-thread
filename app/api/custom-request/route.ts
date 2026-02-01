@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
       customer_name: sanitize(customer_name),
       customer_email: sanitize(customer_email).toLowerCase(),
       customer_phone: sanitize(customer_phone),
-      event_name: sanitize(event_name),
+      event_name: event_name ? sanitize(event_name) : null, // Allow null for optional field
       event_date: sanitize(event_date),
       sizes: sanitize(sizes),
       description: sanitize(description),
