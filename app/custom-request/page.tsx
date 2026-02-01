@@ -368,7 +368,6 @@ export default function CustomRequestPage() {
                   name="event_name"
                   value={formData.event_name}
                   onChange={handleInputChange}
-                  required
                   autoComplete="off"
                   data-lpignore="true"
                   data-form-type="other"
