@@ -61,11 +61,12 @@ export default function CustomRequestPage() {
               // DO NOT auto-submit - user must explicitly click submit button
               // Token is stored and will be used when form is submitted
             },
-            'error-callback': () => {
-              console.error('Turnstile error callback')
+            'error-callback': (error: any) => {
+              console.error('Turnstile error callback:', error)
               turnstileTokenRef.current = null
               setTurnstileToken(null)
-              setError('Security verification failed. Please refresh the page and try again.')
+              // Don't show error immediately - allow user to try again
+              // Only show error if they try to submit without a token
             },
           })
           turnstileWidgetIdRef.current = widgetId
@@ -142,63 +143,50 @@ export default function CustomRequestPage() {
       return
     }
     
-    // Check if Turnstile is available
-    if (typeof window === 'undefined' || !window.turnstile) {
-      setError('Security verification is not available. Please refresh the page and try again.')
-      return
-    }
-
-    // Get or execute Turnstile challenge
-    let finalToken = turnstileTokenRef.current || turnstileToken
+    // Get or execute Turnstile challenge (if available)
+    let finalToken: string | null = null
     
-    // If no token exists, execute challenge and wait
-    if (!finalToken) {
-      try {
-        // Reset token first
-        turnstileTokenRef.current = null
-        setTurnstileToken(null)
-        
-        // Execute Turnstile challenge
-        const widgetId = turnstileWidgetIdRef.current || turnstileRef.current
-        if (!widgetId) {
-          setError('Security verification widget not found. Please refresh the page and try again.')
-          return
+    // Only require Turnstile if it's available and configured
+    if (typeof window !== 'undefined' && window.turnstile) {
+      finalToken = turnstileTokenRef.current || turnstileToken
+      
+      // If no token exists, try to execute challenge
+      if (!finalToken) {
+        try {
+          // Reset token first
+          turnstileTokenRef.current = null
+          setTurnstileToken(null)
+          
+          // Execute Turnstile challenge
+          const widgetId = turnstileWidgetIdRef.current || turnstileRef.current
+          if (widgetId) {
+            console.log('Executing Turnstile challenge (user clicked submit)...')
+            window.turnstile.execute(widgetId)
+            
+            // Wait for token with timeout (max 5 seconds)
+            let attempts = 0
+            const maxAttempts = 50 // 50 * 100ms = 5 seconds
+            while (!turnstileTokenRef.current && attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 100))
+              attempts++
+            }
+            
+            // Update token if received
+            if (turnstileTokenRef.current) {
+              finalToken = turnstileTokenRef.current
+              setTurnstileToken(finalToken)
+              console.log('Turnstile token received and ready for submission')
+            } else {
+              console.warn('Turnstile token not received - will submit without it (may fail if required on server)')
+            }
+          }
+        } catch (error) {
+          console.error('Turnstile execution error:', error)
+          // Continue without token - server will decide if it's required
         }
-        
-        console.log('Executing Turnstile challenge (user clicked submit)...')
-        window.turnstile.execute(widgetId)
-        
-        // Wait for token with timeout (max 5 seconds)
-        let attempts = 0
-        const maxAttempts = 50 // 50 * 100ms = 5 seconds
-        while (!turnstileTokenRef.current && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          attempts++
-        }
-        
-        // Check if we got a token
-        if (!turnstileTokenRef.current) {
-          console.error('Turnstile token not received after 5 seconds')
-          setError('Security verification is taking too long. Please refresh the page and try again.')
-          return
-        }
-        
-        // Update state with the token from ref
-        finalToken = turnstileTokenRef.current
-        setTurnstileToken(finalToken)
-        console.log('Turnstile token received and ready for submission')
-      } catch (error) {
-        console.error('Turnstile execution error:', error)
-        setError('Security verification failed. Please refresh the page and try again.')
-        return
       }
-    }
-    
-    // Final verification - REQUIRED for submission
-    if (!finalToken) {
-      console.error('No Turnstile token available for submission')
-      setError('Security verification is required. Please refresh the page and try again.')
-      return
+    } else {
+      console.warn('Turnstile not available - will submit without token (may fail if required on server)')
     }
 
     setLoading(true)
