@@ -140,22 +140,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify Turnstile token
-    if (!turnstile_token) {
-      console.warn('Turnstile token missing', { ip: clientIP, email: customer_email })
-      return NextResponse.json(
-        { success: false, error: 'Security verification is required. Please refresh and try again.' },
-        { status: 400 }
-      )
-    }
+    // Verify Turnstile token (only if TURNSTILE_SECRET_KEY is configured)
+    const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY
+    if (turnstileSecretKey) {
+      // Turnstile is configured - require valid token
+      if (!turnstile_token) {
+        console.warn('Turnstile token missing but secret key is configured', { ip: clientIP, email: customer_email })
+        return NextResponse.json(
+          { success: false, error: 'Security verification is required. Please refresh and try again.' },
+          { status: 400 }
+        )
+      }
 
-    const isValidTurnstile = await verifyTurnstile(turnstile_token, clientIP)
-    if (!isValidTurnstile) {
-      console.warn('Turnstile verification failed', { ip: clientIP, email: customer_email })
-      return NextResponse.json(
-        { success: false, error: 'Security verification failed. Please refresh and try again.' },
-        { status: 400 }
-      )
+      const isValidTurnstile = await verifyTurnstile(turnstile_token, clientIP)
+      if (!isValidTurnstile) {
+        console.warn('Turnstile verification failed', { ip: clientIP, email: customer_email })
+        return NextResponse.json(
+          { success: false, error: 'Security verification failed. Please refresh the page and try again.' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Turnstile not configured - allow submission without verification
+      console.warn('TURNSTILE_SECRET_KEY not configured - allowing submission without Turnstile verification')
     }
 
     // Check minimum form fill time (at least 3 seconds)
