@@ -8,19 +8,13 @@ import Stripe from 'stripe'
 // ============================================
 
 // Initialize Stripe (only runs server-side in API routes)
-let stripeInstance: Stripe | null = null
-
 function getStripe(): Stripe {
-  if (!stripeInstance) {
-    const secretKey = process.env.STRIPE_SECRET_KEY
-    if (!secretKey) {
-      throw new Error('STRIPE_SECRET_KEY is not configured')
-    }
-    stripeInstance = new Stripe(secretKey, {
-      apiVersion: '2024-11-20.acacia',
-    })
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  if (!secretKey) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
   }
-  return stripeInstance
+  // Initialize Stripe with default API version (latest stable)
+  return new Stripe(secretKey)
 }
 
 export async function GET(request: NextRequest) {
