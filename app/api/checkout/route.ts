@@ -81,10 +81,21 @@ export async function POST(request: NextRequest) {
     const origin = request.headers.get('origin') || 'http://localhost:3000'
 
     // Get Stripe instance
-    const stripe = getStripe()
+    let stripe: Stripe
+    try {
+      stripe = getStripe()
+    } catch (stripeError: any) {
+      console.error('Error initializing Stripe:', stripeError)
+      return NextResponse.json(
+        { error: 'Payment service configuration error. Please contact support.' },
+        { status: 500 }
+      )
+    }
 
     // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    let session: Stripe.Checkout.Session
+    try {
+      session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: items.map((item: any) => ({
         price_data: {
@@ -118,7 +129,28 @@ export async function POST(request: NextRequest) {
           items: JSON.stringify(items),
         },
       },
-    })
+      })
+    } catch (stripeError: any) {
+      console.error('Stripe API error:', {
+        type: stripeError.type,
+        message: stripeError.message,
+        code: stripeError.code,
+        statusCode: stripeError.statusCode,
+      })
+      
+      // Provide user-friendly error messages
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        return NextResponse.json(
+          { error: `Payment processing error: ${stripeError.message}` },
+          { status: 400 }
+        )
+      }
+      
+      return NextResponse.json(
+        { error: 'Failed to create payment session. Please try again.' },
+        { status: 500 }
+      )
+    }
 
     // Store checkout session data in database for webhook processing
     try {
@@ -150,18 +182,14 @@ export async function POST(request: NextRequest) {
       url: session.url,
     })
   } catch (error: any) {
-    console.error('Error creating Stripe checkout session:', error)
-    
-    // Handle Stripe-specific errors
-    if (error.type === 'StripeInvalidRequestError') {
-      return NextResponse.json(
-        { error: `Stripe error: ${error.message}` },
-        { status: 400 }
-      )
-    }
+    console.error('Unexpected error in checkout:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    })
     
     return NextResponse.json(
-      { error: error.message || 'Failed to create checkout session' },
+      { error: 'An unexpected error occurred. Please try again or contact support.' },
       { status: 500 }
     )
   }
