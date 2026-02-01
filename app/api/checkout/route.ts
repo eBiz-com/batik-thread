@@ -95,25 +95,62 @@ export async function POST(request: NextRequest) {
     // Create Stripe Checkout Session
     let session: Stripe.Checkout.Session
     try {
+      // Build line items: products + tax + shipping
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        // Product items
+        ...items.map((item: any) => ({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: item.name || 'Product',
+              description: item.story || `${item.fabric || ''} ${item.origin || ''}`.trim() || `Size: ${item.size || 'M'}`,
+              // Don't include base64 images - they're too large and not valid URLs
+              // Images are stored in database and can be displayed from there
+            },
+            unit_amount: Math.round((item.price || 0) * 100), // Convert to cents
+          },
+          quantity: item.quantity || 1,
+        })),
+      ]
+
+      // Add tax as a line item if applicable
+      const calculatedTax = tax || 0
+      if (calculatedTax > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Tax',
+              description: 'Sales tax',
+            },
+            unit_amount: Math.round(calculatedTax * 100), // Convert to cents
+          },
+          quantity: 1,
+        })
+      }
+
+      // Add shipping as a line item if applicable
+      const calculatedShipping = shipping || 0
+      if (calculatedShipping > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Shipping',
+              description: 'Shipping fee',
+            },
+            unit_amount: Math.round(calculatedShipping * 100), // Convert to cents
+          },
+          quantity: 1,
+        })
+      }
+
       session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: items.map((item: any) => ({
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: item.name || 'Product',
-            description: item.story || `${item.fabric || ''} ${item.origin || ''}`.trim() || `Size: ${item.size || 'M'}`,
-            // Don't include base64 images - they're too large and not valid URLs
-            // Images are stored in database and can be displayed from there
-          },
-          unit_amount: Math.round((item.price || 0) * 100), // Convert to cents
-        },
-        quantity: item.quantity || 1,
-      })),
+      line_items: lineItems,
       mode: 'payment',
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
-      // Add tax and shipping as line items if needed, or use automatic_tax
       shipping_address_collection: {
         allowed_countries: ['US'],
       },
