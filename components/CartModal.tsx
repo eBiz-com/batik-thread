@@ -49,17 +49,31 @@ export default function CartModal({ cart, onClose, onRemove, onUpdateQuantity, t
         }),
       })
 
-      const data = await response.json()
-
-      if (!response.ok || data.error) {
-        if (data.outOfStock && data.redirectTo) {
-          const redirect = confirm(`${data.error}\n\nWould you like to place a custom order instead?`)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Checkout API error:', {
+          status: response.status,
+          error: errorData.error,
+          data: errorData,
+        })
+        
+        if (errorData.outOfStock && errorData.redirectTo) {
+          const redirect = confirm(`${errorData.error}\n\nWould you like to place a custom order instead?`)
           if (redirect) {
-            window.location.href = data.redirectTo
+            window.location.href = errorData.redirectTo
           }
         } else {
-          alert(data.error || 'Failed to initiate checkout')
+          alert(errorData.error || 'Failed to initiate checkout. Please try again.')
         }
+        setLoading(false)
+        return
+      }
+
+      const data = await response.json()
+      
+      if (data.error) {
+        console.error('Checkout error in response:', data.error)
+        alert(data.error || 'Failed to initiate checkout')
         setLoading(false)
         return
       }
