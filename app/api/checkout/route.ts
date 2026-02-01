@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       })),
       mode: 'payment',
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cart?canceled=true`,
+      cancel_url: `${origin}/cart`,
       // Add tax and shipping as line items if needed, or use automatic_tax
       shipping_address_collection: {
         allowed_countries: ['US'],
