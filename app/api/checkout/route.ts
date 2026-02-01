@@ -123,10 +123,20 @@ export async function POST(request: NextRequest) {
         total: (total || subtotal || 0).toString(),
         item_count: items.length.toString(),
       },
-      // Store custom data for webhook processing
+      // Store minimal item data in payment intent metadata (for webhook fallback)
+      // Only store essential fields to stay under Stripe's 500 char limit per value
       payment_intent_data: {
         metadata: {
-          items: JSON.stringify(items),
+          // Store only essential item data (id, name, quantity, size) - no images
+          items: JSON.stringify(
+            items.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity || 1,
+              size: item.size || 'M',
+              price: item.price || 0,
+            }))
+          ),
         },
       },
       })
