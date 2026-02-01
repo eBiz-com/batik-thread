@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import Stripe from 'stripe'
 
 // ============================================
 // STRIPE CHECKOUT API
 // Creates Stripe Checkout sessions with stock validation
 // ============================================
 
-// Dynamic import to ensure Stripe is only loaded server-side
-async function getStripe() {
-  const Stripe = (await import('stripe')).default
-  return new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2024-11-20.acacia',
-  })
+// Initialize Stripe (only runs server-side in API routes)
+let stripeInstance: Stripe | null = null
+
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const secretKey = process.env.STRIPE_SECRET_KEY
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured')
+    }
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: '2024-11-20.acacia',
+    } as Stripe.StripeConfig)
+  }
+  return stripeInstance
 }
 
 export async function POST(request: NextRequest) {
@@ -78,7 +87,7 @@ export async function POST(request: NextRequest) {
     const origin = request.headers.get('origin') || 'http://localhost:3000'
 
     // Get Stripe instance
-    const stripe = await getStripe()
+    const stripe = getStripe()
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
