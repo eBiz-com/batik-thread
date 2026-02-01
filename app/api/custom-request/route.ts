@@ -282,12 +282,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and limit image sizes
+    let validatedStyleImages: string[] = []
     if (style_images && Array.isArray(style_images)) {
       const maxImageSize = 5 * 1024 * 1024 // 5MB per image (base64)
       const maxTotalSize = 20 * 1024 * 1024 // 20MB total for all images
       
       let totalSize = 0
-      const validImages: string[] = []
       
       for (let i = 0; i < style_images.length; i++) {
         const image = style_images[i]
@@ -304,13 +304,12 @@ export async function POST(request: NextRequest) {
             break
           }
           
-          validImages.push(image)
+          validatedStyleImages.push(image)
           totalSize += imageSize
         }
       }
       
-      console.log(`Image validation: ${validImages.length}/${style_images.length} images accepted, total size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`)
-      style_images = validImages
+      console.log(`Image validation: ${validatedStyleImages.length}/${style_images.length} images accepted, total size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`)
     }
 
     // Sanitize inputs - remove potential XSS
@@ -339,7 +338,7 @@ export async function POST(request: NextRequest) {
           quantity: parseInt(quantity),
           sizes: sanitizedData.sizes,
           description: sanitizedData.description,
-          style_images: style_images || [],
+          style_images: validatedStyleImages,
           status: 'pending',
           created_at: new Date().toISOString(),
         },
