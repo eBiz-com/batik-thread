@@ -50,6 +50,10 @@ function SuccessContent() {
             const data = await response.json()
             if (data.receipt) {
               // Format receipt data for display
+              const subtotal = data.receipt.subtotal || 0
+              const tax = data.receipt.tax || 0
+              const taxPercent = subtotal > 0 ? (tax / subtotal) * 100 : 0
+              
               const formattedReceipt: ReceiptData = {
                 receiptNumber: data.receipt.receipt_number,
                 receiptId: data.receipt.id,
@@ -59,9 +63,10 @@ function SuccessContent() {
                   phone: data.receipt.customer_phone,
                   address: data.receipt.customer_address,
                 },
-                subtotal: data.receipt.subtotal || 0,
-                tax: data.receipt.tax || 0,
+                subtotal: subtotal,
+                tax: tax,
                 shipping: data.receipt.shipping || 0,
+                taxPercent: taxPercent,
                 total: data.receipt.grand_total || 0,
                 date: data.receipt.receipt_date || new Date().toISOString().split('T')[0],
               }
