@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
           product_data: {
             name: item.name || 'Product',
             description: item.story || `${item.fabric || ''} ${item.origin || ''}`.trim() || `Size: ${item.size || 'M'}`,
-            images: item.images && item.images.length > 0 ? [item.images[0]] : [],
+            // Don't include base64 images - they're too large and not valid URLs
+            // Images are stored in database and can be displayed from there
           },
           unit_amount: Math.round((item.price || 0) * 100), // Convert to cents
         },
