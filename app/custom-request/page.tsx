@@ -136,7 +136,7 @@ export default function CustomRequestPage() {
     
     // Validate required fields are filled
     if (!formData.customer_name || !formData.customer_email || !formData.customer_phone || 
-        !formData.event_name || !formData.event_date || !formData.quantity || 
+        !formData.event_date || !formData.quantity || 
         !formData.sizes || !formData.description) {
       setError('Please fill out all required fields.')
       return
@@ -362,7 +362,7 @@ export default function CustomRequestPage() {
               <h2 className="text-xl font-serif text-gold border-b border-gold/20 pb-2">Event Details</h2>
               
               <div>
-                <label className="block text-gold text-sm mb-2">Event Name *</label>
+                <label className="block text-gold text-sm mb-2">Event Name</label>
                 <input
                   type="text"
                   name="event_name"

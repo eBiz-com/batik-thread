@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!customer_name || !customer_email || !customer_phone || !event_name || !event_date || !quantity || !sizes || !description) {
+    if (!customer_name || !customer_email || !customer_phone || !event_date || !quantity || !sizes || !description) {
       return NextResponse.json(
         { success: false, error: 'All required fields must be filled' },
         { status: 400 }
