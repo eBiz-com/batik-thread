@@ -281,6 +281,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate and limit image sizes
+    if (style_images && Array.isArray(style_images)) {
+      const maxImageSize = 5 * 1024 * 1024 // 5MB per image (base64)
+      const maxTotalSize = 20 * 1024 * 1024 // 20MB total for all images
+      
+      let totalSize = 0
+      const validImages: string[] = []
+      
+      for (let i = 0; i < style_images.length; i++) {
+        const image = style_images[i]
+        if (typeof image === 'string') {
+          const imageSize = new Blob([image]).size
+          
+          if (imageSize > maxImageSize) {
+            console.warn(`Image ${i + 1} too large: ${(imageSize / 1024 / 1024).toFixed(2)}MB, skipping`)
+            continue
+          }
+          
+          if (totalSize + imageSize > maxTotalSize) {
+            console.warn(`Total image size limit reached, skipping remaining ${style_images.length - i} images`)
+            break
+          }
+          
+          validImages.push(image)
+          totalSize += imageSize
+        }
+      }
+      
+      console.log(`Image validation: ${validImages.length}/${style_images.length} images accepted, total size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`)
+      style_images = validImages
+    }
+
     // Sanitize inputs - remove potential XSS
     const sanitize = (str: string) => str.trim().replace(/[<>]/g, '')
     const sanitizedData = {

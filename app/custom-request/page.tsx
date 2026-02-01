@@ -37,6 +37,8 @@ export default function CustomRequestPage() {
   const turnstileRef = useRef<HTMLDivElement>(null)
   const turnstileWidgetIdRef = useRef<string | null>(null)
   const turnstileTokenRef = useRef<string | null>(null)
+  const submitButtonRef = useRef<HTMLButtonElement>(null)
+  const userClickedSubmitRef = useRef(false)
 
   // Load Cloudflare Turnstile script and initialize
   useEffect(() => {
@@ -108,9 +110,62 @@ export default function CustomRequestPage() {
     setImagePreviews(newPreviews)
   }
 
+  // Compress image to reduce size and prevent truncation
+  const compressImage = (file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.8): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          // Calculate new dimensions
+          if (width > height) {
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width
+              width = maxWidth
+            }
+          } else {
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height
+              height = maxHeight
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'))
+            return
+          }
+
+          ctx.drawImage(img, 0, 0, width, height)
+          const compressedBase64 = canvas.toDataURL('image/jpeg', quality)
+          resolve(compressedBase64)
+        }
+        img.onerror = reject
+        img.src = e.target?.result as string
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation() // Prevent event bubbling
+    
+    // CRITICAL: Only allow submission if triggered by actual user click
+    if (!userClickedSubmitRef.current) {
+      console.warn('Form submission blocked - not triggered by user click')
+      return
+    }
+    
+    // Reset the flag immediately
+    userClickedSubmitRef.current = false
     
     // Prevent double submission
     if (loading || submitted) {
@@ -195,16 +250,25 @@ export default function CustomRequestPage() {
       // Upload images to Supabase storage (or convert to base64 for demo)
       const imageUrls: string[] = []
 
-      // For demo, we'll convert images to base64
-      // In production, upload to Supabase Storage
+      // Compress and convert images to base64 to prevent truncation
+      // In production, upload to Supabase Storage instead
       for (const image of images) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(image)
-        })
-        imageUrls.push(base64)
+        try {
+          // Compress image before converting to base64
+          const compressedBase64 = await compressImage(image, 1920, 1920, 0.8)
+          imageUrls.push(compressedBase64)
+          console.log(`Image compressed: ${image.name}, original size: ${(image.size / 1024).toFixed(2)}KB, compressed: ${(compressedBase64.length / 1024).toFixed(2)}KB`)
+        } catch (error) {
+          console.error('Error compressing image:', error)
+          // Fallback to original if compression fails
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(image)
+          })
+          imageUrls.push(base64)
+        }
       }
 
       // Submit request to API
@@ -289,7 +353,25 @@ export default function CustomRequestPage() {
             Request bulk sewing for your event. Fill out the form below and we'll get back to you with a quote.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+          <form 
+            onSubmit={handleSubmit} 
+            className="space-y-6" 
+            autoComplete="off"
+            onKeyDown={(e) => {
+              // Prevent Enter key from submitting unless submit button was clicked
+              if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
+                // Allow Enter in textarea
+                if (e.target.tagName === 'TEXTAREA') {
+                  return
+                }
+                // For other inputs, prevent default and require button click
+                if (!userClickedSubmitRef.current) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }
+              }
+            }}
+          >
 
             {/* Customer Information */}
             <div className="space-y-4">
@@ -521,6 +603,7 @@ export default function CustomRequestPage() {
                 Cancel
               </Link>
               <button
+                ref={submitButtonRef}
                 type="submit"
                 disabled={loading || submitted}
                 onClick={(e) => {
@@ -531,6 +614,12 @@ export default function CustomRequestPage() {
                     e.stopPropagation()
                     return false
                   }
+                  // Mark that user explicitly clicked submit
+                  userClickedSubmitRef.current = true
+                }}
+                onMouseDown={() => {
+                  // Mark on mousedown as well (before click) for extra security
+                  userClickedSubmitRef.current = true
                 }}
                 className="flex-1 px-6 py-3 bg-gold text-black rounded-full hover:bg-gold-light transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
