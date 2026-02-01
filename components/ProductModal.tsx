@@ -137,15 +137,27 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
 
       const data = await response.json()
 
+      if (!response.ok) {
+        console.error('Checkout API error:', {
+          status: response.status,
+          error: data.error,
+          data: data,
+        })
+        alert(data.error || 'Failed to initiate checkout. Please try again.')
+        return
+      }
+
       if (data.url) {
-        // Redirect to demo payment page
+        // Redirect to Stripe Checkout
+        console.log('Redirecting to Stripe Checkout:', data.url)
         window.location.href = data.url
       } else {
-        throw new Error('No checkout URL received')
+        console.error('No checkout URL in response:', data)
+        alert('Failed to initiate checkout. No payment URL received.')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error)
-      alert('Failed to initiate checkout. Please try again.')
+      alert(`Failed to initiate checkout: ${error.message || 'Please try again.'}`)
     }
   }
 
